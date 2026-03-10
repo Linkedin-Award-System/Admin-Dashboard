@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
 import { map, exhaustMap, catchError, mergeMap } from 'rxjs/operators';
@@ -7,6 +7,9 @@ import { CommentActions } from './comment.actions';
 
 @Injectable()
 export class CommentEffects {
+  private actions$ = inject(Actions);
+  private commentService = inject(CommentService);
+
   loadComments$ = createEffect(() =>
     this.actions$.pipe(
       ofType(CommentActions.loadComments),
@@ -28,7 +31,7 @@ export class CommentEffects {
           comment.content!, 
           comment.type, 
           comment.timestamp, 
-          comment.voiceUrl
+          comment.audioUrl
         ).pipe(
           map(newComment => CommentActions.addCommentSuccess({ comment: newComment })),
           catchError(error => of(CommentActions.addCommentFailure({ error: error.message })))
@@ -37,8 +40,5 @@ export class CommentEffects {
     )
   );
 
-  constructor(
-    private actions$: Actions,
-    private commentService: CommentService
-  ) {}
+  constructor() {}
 }

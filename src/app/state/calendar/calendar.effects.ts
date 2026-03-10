@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
 import { map, exhaustMap, catchError, mergeMap } from 'rxjs/operators';
@@ -7,6 +7,9 @@ import { CalendarActions } from './calendar.actions';
 
 @Injectable()
 export class CalendarEffects {
+  private actions$ = inject(Actions);
+  private calendarService = inject(CalendarService);
+
   loadEvents$ = createEffect(() =>
     this.actions$.pipe(
       ofType(CalendarActions.loadEvents),
@@ -31,8 +34,5 @@ export class CalendarEffects {
     )
   );
 
-  constructor(
-    private actions$: Actions,
-    private calendarService: CalendarService
-  ) {}
+  constructor() {}
 }

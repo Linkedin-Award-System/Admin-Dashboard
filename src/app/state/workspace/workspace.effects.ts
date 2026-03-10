@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
 import { map, exhaustMap, catchError, mergeMap } from 'rxjs/operators';
@@ -7,6 +7,9 @@ import { WorkspaceActions } from './workspace.actions';
 
 @Injectable()
 export class WorkspaceEffects {
+  private actions$ = inject(Actions);
+  private workspaceService = inject(WorkspaceService);
+
   loadWorkspaces$ = createEffect(() =>
     this.actions$.pipe(
       ofType(WorkspaceActions.loadWorkspaces),
@@ -31,8 +34,5 @@ export class WorkspaceEffects {
     )
   );
 
-  constructor(
-    private actions$: Actions,
-    private workspaceService: WorkspaceService
-  ) {}
+  constructor() {}
 }

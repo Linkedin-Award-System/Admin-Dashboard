@@ -3,13 +3,21 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
+import { MatMenuModule } from '@angular/material/menu';
 import WaveSurfer from 'wavesurfer.js';
 import { TimeFormatPipe } from '../../../shared/pipes/time-format.pipe';
 
 @Component({
   selector: 'app-audio-viewer',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatSliderModule, TimeFormatPipe],
+  imports: [
+    CommonModule, 
+    MatButtonModule, 
+    MatIconModule, 
+    MatSliderModule, 
+    MatMenuModule, 
+    TimeFormatPipe
+  ],
   template: `
     <div class="audio-player-container">
       <div class="waveform-container" #waveformContainer></div>

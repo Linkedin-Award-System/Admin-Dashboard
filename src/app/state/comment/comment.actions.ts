@@ -10,7 +10,7 @@ export interface Comment {
   content: string;
   timestamp?: number; // For video/audio comments
   type: 'text' | 'voice';
-  voiceUrl?: string;
+  audioUrl?: string;
   parentId?: string;
   createdAt: string;
   isEdited: boolean;

@@ -9,7 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSidenavModule } from '@angular/material/sidenav';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
 import { Project, ProjectActions } from '../../../state/project/project.actions';
@@ -259,7 +259,7 @@ export class ProjectDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private store: Store,
-    private router: RouterModule // Just for go back
+    private router: Router
   ) {
     this.files$ = this.store.select(selectAllFiles);
   }
@@ -268,9 +268,7 @@ export class ProjectDetailComponent implements OnInit {
     this.route.params.subscribe(params => {
       this.projectId = params['id'];
       if (this.projectId) {
-        // Load project and files
         this.store.dispatch(FileActions.loadFiles({ projectId: this.projectId }));
-        // Mock project for now as we don't have a single project selector/load action implemented yet
         this.project = {
           id: this.projectId,
           workspaceId: '1',
@@ -294,12 +292,10 @@ export class ProjectDetailComponent implements OnInit {
 
   showProperties(file: CreatorFile): void {
     this.selectedFile = file;
-    // We assume the template has #propertiesSidenav
   }
 
   viewFile(file: CreatorFile): void {
     this.selectedFile = file;
-    // Implementation for viewing file (opening FileViewer dialog or route)
     console.log('Viewing file:', file.name);
   }
 

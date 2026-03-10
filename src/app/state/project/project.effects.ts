@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
 import { map, exhaustMap, catchError, mergeMap } from 'rxjs/operators';
@@ -7,6 +7,9 @@ import { ProjectActions } from './project.actions';
 
 @Injectable()
 export class ProjectEffects {
+  private actions$ = inject(Actions);
+  private projectService = inject(ProjectService);
+
   loadProjects$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ProjectActions.loadProjects),
@@ -31,8 +34,5 @@ export class ProjectEffects {
     )
   );
 
-  constructor(
-    private actions$: Actions,
-    private projectService: ProjectService
-  ) {}
+  constructor() {}
 }
