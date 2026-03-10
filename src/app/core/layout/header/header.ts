@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
 import { AuthService, User } from '../../services/auth.service';
@@ -14,7 +15,7 @@ import { NotificationListComponent } from '../../../features/notifications/notif
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, MatToolbarModule, MatButtonModule, MatIconModule, MatBadgeModule, MatMenuModule, NotificationListComponent],
+  imports: [CommonModule, MatToolbarModule, MatButtonModule, MatIconModule, MatBadgeModule, MatMenuModule, MatDividerModule, NotificationListComponent],
   template: `
     <mat-toolbar color="primary" class="app-header">
       <button mat-icon-button (click)="toggleSidebar.emit()">

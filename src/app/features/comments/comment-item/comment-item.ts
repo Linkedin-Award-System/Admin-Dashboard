@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { Comment } from '../../../state/comment/comment.actions';
+import { VoicePlayerComponent } from '../voice-player/voice-player';
 
 @Component({
   selector: 'app-comment-item',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, VoicePlayerComponent],
   template: `
     <div class="comment-item">
       <div class="comment-avatar">
@@ -25,8 +26,7 @@ import { Comment } from '../../../state/comment/comment.actions';
         <div class="message">
           <p *ngIf="comment.type === 'text'">{{ comment.content }}</p>
           <div *ngIf="comment.type === 'voice'" class="voice-comment">
-             <mat-icon>play_circle_filled</mat-icon>
-             <span>Voice comment (0:15)</span>
+             <app-voice-player [src]="comment.audioUrl!"></app-voice-player>
           </div>
         </div>
         <div class="comment-actions">

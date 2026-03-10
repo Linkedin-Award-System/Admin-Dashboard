@@ -11,6 +11,7 @@ import { Workspace, WorkspaceActions } from '../../../state/workspace/workspace.
 import { selectAllWorkspaces, selectIsLoading } from '../../../state/app.selectors';
 import { WorkspaceFormComponent } from '../workspace-form/workspace-form';
 import { RouterModule } from '@angular/router';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton';
 
 @Component({
   selector: 'app-workspace-list',
@@ -22,7 +23,8 @@ import { RouterModule } from '@angular/router';
     MatIconModule, 
     MatDialogModule,
     MatProgressBarModule,
-    RouterModule
+    RouterModule,
+    SkeletonComponent
   ],
   template: `
     <div class="workspace-list-container">
@@ -34,11 +36,24 @@ import { RouterModule } from '@angular/router';
         </button>
       </header>
 
-      <div class="loading-bar" *ngIf="isLoading$ | async">
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <div class="workspace-grid" *ngIf="isLoading$ | async">
+        <mat-card *ngFor="let i of [1,2,3,4]" class="workspace-card skeleton-card">
+          <mat-card-header>
+            <app-skeleton mat-card-avatar width="40px" height="40px" borderRadius="50%"></app-skeleton>
+            <mat-card-title><app-skeleton width="150px" height="20px"></app-skeleton></mat-card-title>
+            <mat-card-subtitle><app-skeleton width="80px" height="15px"></app-skeleton></mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <app-skeleton width="100%" height="15px" margin="10px 0 5px"></app-skeleton>
+            <app-skeleton width="90%" height="15px" margin="0 0 15px"></app-skeleton>
+            <div class="storage-usage">
+              <app-skeleton width="100%" height="8px"></app-skeleton>
+            </div>
+          </mat-card-content>
+        </mat-card>
       </div>
 
-      <div class="workspace-grid">
+      <div class="workspace-grid" *ngIf="!(isLoading$ | async)">
         <mat-card *ngFor="let workspace of workspaces$ | async" class="workspace-card" [routerLink]="['/workspaces', workspace.id]">
           <mat-card-header>
             <div mat-card-avatar class="workspace-avatar">

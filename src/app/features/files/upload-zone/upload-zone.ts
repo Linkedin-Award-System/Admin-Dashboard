@@ -12,7 +12,7 @@ import { DragDropDirective } from '../../../shared/directives/drag-drop.directiv
   template: `
     <div class="upload-container" 
          appDragDrop 
-         (fileDropped)="onFileDropped($event)"
+         (fileDropped)="onFileDropped($any($event))"
          [class.dragging]="isDragging">
       <div class="upload-area">
         <mat-icon class="upload-icon">cloud_upload</mat-icon>

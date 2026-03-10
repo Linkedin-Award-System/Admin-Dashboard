@@ -5,46 +5,60 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder';
 
 @Component({
   selector: 'app-comment-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, VoiceRecorderComponent],
   template: `
-    <form [formGroup]="commentForm" (ngSubmit)="onSubmit()" class="comment-form">
-      <mat-form-field appearance="outline" class="full-width">
-        <textarea matInput 
-                  formControlName="content" 
-                  [placeholder]="placeholder" 
-                  rows="2" 
-                  (keydown.enter)="$event.shiftKey ? null : onSubmit(); $event.preventDefault()"></textarea>
-        <button mat-icon-button matSuffix (click)="onSubmit()" [disabled]="commentForm.invalid">
-          <mat-icon color="primary">send</mat-icon>
+    <div class="comment-form-container">
+      <div class="mode-toggle" *ngIf="showVoiceOption">
+        <button mat-button [color]="mode === 'text' ? 'primary' : ''" (click)="setMode('text')">
+          <mat-icon>chat</mat-icon> Text
         </button>
-      </mat-form-field>
-      
-      <div class="voice-comment-hint" *ngIf="showVoiceOption">
-        <button mat-icon-button type="button" color="accent" title="Record Voice Comment">
-          <mat-icon>mic</mat-icon>
+        <button mat-button [color]="mode === 'voice' ? 'primary' : ''" (click)="setMode('voice')">
+          <mat-icon>mic</mat-icon> Voice
         </button>
-        <span>Record a voice comment</span>
       </div>
-    </form>
+
+      <form [formGroup]="commentForm" (ngSubmit)="onSubmit()" class="comment-form" *ngIf="mode === 'text'">
+        <mat-form-field appearance="outline" class="full-width">
+          <textarea matInput 
+                    formControlName="content" 
+                    [placeholder]="placeholder" 
+                    rows="2" 
+                    (keydown.enter)="onKeydown($event)"></textarea>
+          <button mat-icon-button matSuffix (click)="onSubmit()" [disabled]="commentForm.invalid">
+            <mat-icon color="primary">send</mat-icon>
+          </button>
+        </mat-form-field>
+      </form>
+
+      <app-voice-recorder *ngIf="mode === 'voice'" (voiceRecorded)="onVoiceRecorded($event)"></app-voice-recorder>
+    </div>
   `,
   styles: `
     .full-width {
       width: 100%;
     }
-    .comment-form {
+    .comment-form-container {
       margin-top: 15px;
     }
-    .voice-comment-hint {
+    .mode-toggle {
       display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12px;
-      color: #666;
-      margin-top: -10px;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .mode-toggle button {
+       font-size: 12px;
+       height: 32px;
+       line-height: 32px;
+    }
+    .mode-toggle mat-icon {
+       font-size: 18px;
+       width: 18px;
+       height: 18px;
     }
   `
 })
@@ -52,13 +66,31 @@ export class CommentFormComponent {
   @Input() placeholder = 'Write a comment...';
   @Input() showVoiceOption = true;
   @Output() commentSubmitted = new EventEmitter<string>();
+  @Output() voiceCommentSubmitted = new EventEmitter<Blob>();
 
   commentForm: FormGroup;
+  mode: 'text' | 'voice' = 'text';
 
   constructor(private fb: FormBuilder) {
     this.commentForm = this.fb.group({
       content: ['', [Validators.required, Validators.maxLength(1000)]]
     });
+  }
+
+  setMode(mode: 'text' | 'voice'): void {
+    this.mode = mode;
+  }
+
+  onVoiceRecorded(blob: Blob): void {
+    this.voiceCommentSubmitted.emit(blob);
+    this.setMode('text');
+  }
+
+  onKeydown(event: any): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      this.onSubmit();
+      event.preventDefault();
+    }
   }
 
   onSubmit(): void {

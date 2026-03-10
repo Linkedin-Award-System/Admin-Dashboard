@@ -8,6 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
@@ -16,6 +17,7 @@ import { FileActions, CreatorFile } from '../../../state/file/file.actions';
 import { selectAllFiles } from '../../../state/app.selectors';
 import { VersionHistoryComponent } from '../version-history/version-history';
 import { ProjectStatusComponent } from '../project-status/project-status';
+import { FilePropertiesComponent } from '../../files/file-properties/file-properties';
 
 @Component({
   selector: 'app-project-detail',
@@ -30,114 +32,134 @@ import { ProjectStatusComponent } from '../project-status/project-status';
     MatMenuModule,
     MatChipsModule,
     MatProgressBarModule,
+    MatSidenavModule,
     RouterModule,
     VersionHistoryComponent,
-    ProjectStatusComponent
+    ProjectStatusComponent,
+    FilePropertiesComponent
   ],
   template: `
-    <div class="project-detail-container">
-      <header class="detail-header">
-        <div class="title-section">
-          <button mat-icon-button (click)="goBack()">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          <div>
-            <h1>{{ project?.name || 'Loading project...' }}</h1>
-            <p class="description">{{ project?.description }}</p>
-          </div>
-        </div>
-        <div class="actions">
-          <app-project-status [status]="project?.status || 'active'"></app-project-status>
-          <button mat-raised-button color="primary">
-            <mat-icon>cloud_upload</mat-icon>
-            Upload File
-          </button>
-          <button mat-icon-button [matMenuTriggerFor]="projectMenu">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #projectMenu="matMenu">
-            <button mat-menu-item>
-              <mat-icon>edit</mat-icon>
-              <span>Edit Project</span>
-            </button>
-            <button mat-menu-item class="warn-text">
-              <mat-icon color="warn">delete</mat-icon>
-              <span>Delete Project</span>
-            </button>
-          </mat-menu>
-        </div>
-      </header>
-
-      <mat-tab-group class="detail-tabs">
-        <mat-tab label="Files">
-          <div class="tab-content">
-            <div class="file-grid" *ngIf="(files$ | async)?.length; else emptyFiles">
-              <mat-card *ngFor="let file of files$ | async" class="file-card">
-                <div class="file-preview">
-                  <mat-icon class="file-icon">{{ getFileIcon(file.type) }}</mat-icon>
-                  <img *ngIf="file.thumbnailUrl" [src]="file.thumbnailUrl" [alt]="file.name">
-                </div>
-                <mat-card-content>
-                  <div class="file-name">{{ file.name }}</div>
-                  <div class="file-info">
-                    <span>{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span>
-                    <span>v{{ file.version }}</span>
-                  </div>
-                </mat-card-content>
-                <mat-card-actions>
-                  <button mat-button color="primary">View</button>
-                  <button mat-icon-button [matMenuTriggerFor]="fileMenu">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #fileMenu="matMenu">
-                    <button mat-menu-item>
-                      <mat-icon>history</mat-icon>
-                      <span>Versions</span>
-                    </button>
-                    <button mat-menu-item>
-                      <mat-icon>download</mat-icon>
-                      <span>Download</span>
-                    </button>
-                  </mat-menu>
-                </mat-card-actions>
-              </mat-card>
-            </div>
-            <ng-template #emptyFiles>
-              <div class="empty-state">
-                <mat-icon class="empty-icon">insert_drive_file</mat-icon>
-                <h3>No files in this project</h3>
-                <p>Upload your first file to get started.</p>
-                <button mat-raised-button color="primary">Upload File</button>
+    <mat-sidenav-container class="project-detail-container">
+      <mat-sidenav-content>
+        <div class="content-wrapper">
+          <header class="detail-header">
+            <div class="title-section">
+              <button mat-icon-button (click)="goBack()">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              <div>
+                <h1>{{ project?.name || 'Loading project...' }}</h1>
+                <p class="description">{{ project?.description }}</p>
               </div>
-            </ng-template>
-          </div>
-        </mat-tab>
+            </div>
+            <div class="actions">
+              <app-project-status [status]="project?.status || 'active'"></app-project-status>
+              <button mat-raised-button color="primary">
+                <mat-icon>cloud_upload</mat-icon>
+                Upload File
+              </button>
+              <button mat-icon-button [matMenuTriggerFor]="projectMenu">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #projectMenu="matMenu">
+                <button mat-menu-item>
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit Project</span>
+                </button>
+                <button mat-menu-item class="warn-text">
+                  <mat-icon color="warn">delete</mat-icon>
+                  <span>Delete Project</span>
+                </button>
+              </mat-menu>
+            </div>
+          </header>
 
-        <mat-tab label="History">
-          <div class="tab-content">
-            <app-version-history [projectId]="projectId"></app-version-history>
-          </div>
-        </mat-tab>
+          <mat-tab-group class="detail-tabs">
+            <mat-tab label="Files">
+              <div class="tab-content">
+                <div class="file-grid" *ngIf="(files$ | async)?.length; else emptyFiles">
+                  <mat-card *ngFor="let file of files$ | async" class="file-card">
+                    <div class="file-preview" (click)="viewFile(file)">
+                      <mat-icon class="file-icon">{{ getFileIcon(file.type) }}</mat-icon>
+                      <img *ngIf="file.thumbnailUrl" [src]="file.thumbnailUrl" [alt]="file.name">
+                    </div>
+                    <mat-card-content>
+                      <div class="file-name">{{ file.name }}</div>
+                      <div class="file-info">
+                        <span>{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span>
+                        <span>v{{ file.version }}</span>
+                      </div>
+                    </mat-card-content>
+                    <mat-card-actions>
+                      <button mat-button color="primary" (click)="viewFile(file)">View</button>
+                      <button mat-icon-button [matMenuTriggerFor]="fileMenu">
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #fileMenu="matMenu">
+                        <button mat-menu-item (click)="showProperties(file)">
+                          <mat-icon>info</mat-icon>
+                          <span>Properties</span>
+                        </button>
+                        <button mat-menu-item>
+                          <mat-icon>history</mat-icon>
+                          <span>Versions</span>
+                        </button>
+                        <button mat-menu-item>
+                          <mat-icon>download</mat-icon>
+                          <span>Download</span>
+                        </button>
+                      </mat-menu>
+                    </mat-card-actions>
+                  </mat-card>
+                </div>
+                <ng-template #emptyFiles>
+                  <div class="empty-state">
+                    <mat-icon class="empty-icon">insert_drive_file</mat-icon>
+                    <h3>No files in this project</h3>
+                    <p>Upload your first file to get started.</p>
+                    <button mat-raised-button color="primary">Upload File</button>
+                  </div>
+                </ng-template>
+              </div>
+            </mat-tab>
 
-        <mat-tab label="Team">
-          <div class="tab-content">
-             <mat-card class="team-card">
-                <mat-card-header>
-                  <mat-card-title>Project Collaborators</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <mat-list>
-                    <mat-list-item>
-                       <div matListItemIcon class="avatar">A</div>
-                       <div matListItemTitle>Abebe (Owner)</div>
-                    </mat-list-item>
-                  </mat-list>
-                </mat-card-content>
-             </mat-card>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
-    </div>
+            <mat-tab label="History">
+              <div class="tab-content">
+                <app-version-history [projectId]="projectId"></app-version-history>
+              </div>
+            </mat-tab>
+
+            <mat-tab label="Team">
+              <div class="tab-content">
+                <mat-card class="team-card">
+                  <mat-card-header>
+                    <mat-card-title>Project Collaborators</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <mat-list>
+                      <mat-list-item>
+                        <div matListItemIcon class="avatar">A</div>
+                        <div matListItemTitle>Abebe (Owner)</div>
+                      </mat-list-item>
+                    </mat-list>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </div>
+      </mat-sidenav-content>
+
+      <mat-sidenav #propertiesSidenav mode="over" position="end" class="properties-sidenav">
+        <div class="sidenav-header">
+          <h3>File Properties</h3>
+          <button mat-icon-button (click)="propertiesSidenav.close()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <app-file-properties *ngIf="selectedFile" [file]="selectedFile"></app-file-properties>
+      </mat-sidenav>
+    </mat-sidenav-container>
   `,
   styles: `
     .project-detail-container {
@@ -232,6 +254,7 @@ export class ProjectDetailComponent implements OnInit {
   projectId: string = '';
   project: Project | null = null;
   files$: Observable<CreatorFile[]>;
+  selectedFile: CreatorFile | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -267,6 +290,17 @@ export class ProjectDetailComponent implements OnInit {
     if (type.includes('pdf')) return 'picture_as_pdf';
     if (type.includes('audio')) return 'audiotrack';
     return 'insert_drive_file';
+  }
+
+  showProperties(file: CreatorFile): void {
+    this.selectedFile = file;
+    // We assume the template has #propertiesSidenav
+  }
+
+  viewFile(file: CreatorFile): void {
+    this.selectedFile = file;
+    // Implementation for viewing file (opening FileViewer dialog or route)
+    console.log('Viewing file:', file.name);
   }
 
   goBack(): void {

@@ -4,13 +4,15 @@ import { RouterModule } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { HeaderComponent } from '../header/header';
 import { SidebarComponent } from '../sidebar/sidebar';
+import { ToastComponent } from '../../components/toast/toast.component';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatSidenavModule, HeaderComponent, SidebarComponent],
+  imports: [CommonModule, RouterModule, MatSidenavModule, HeaderComponent, SidebarComponent, ToastComponent],
   template: `
     <div class="layout-container">
+      <app-toast></app-toast>
       <app-header (toggleSidebar)="sidenav.toggle()"></app-header>
       
       <mat-sidenav-container class="sidenav-container">
