@@ -135,7 +135,7 @@ The backend should use the following database configuration:
 - **Port**: 3306
 - **Database**: linkedin_awards_db
 - **User**: root
-- **Password**: admin
+- **Password**: ********
 
 ## Features
 
