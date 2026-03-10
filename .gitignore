@@ -1,0 +1,40 @@
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.cproject
+/.settings
+/.vscode
+*.swp
+*.bak
+*.tmp
+*.temp
+.DS_Store
+
+# Angular
+/.angular
+/.cache
+/.editorconfig
+/.npmrc
+
+# Local environment files
+.env
+.env.local
+
+# Testing
+/coverage
+
+# System Files
+Thumbs.db
+Desktop.ini
