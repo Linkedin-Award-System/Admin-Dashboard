@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Button } from '@/shared/components/ui/button';
 import { Label } from '@/shared/components/ui/label';
 import { Pencil, Trash2, Plus, ExternalLink } from 'lucide-react';
+import { NomineeListSkeleton } from './NomineeListSkeleton';
 import type { Nominee } from '../types';
 
 interface NomineeListProps {
@@ -41,26 +42,7 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
   }, [nominees, categories]);
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-bold">Nominees</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mt-2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
+    return <NomineeListSkeleton />;
   }
 
   if (error) {
@@ -83,23 +65,24 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold">Nominees</h2>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-2xl sm:text-3xl font-bold">Nominees</h2>
         {onCreate && (
-          <Button onClick={onCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={onCreate} aria-label="Add new nominee" className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             Add Nominee
           </Button>
         )}
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Label htmlFor="category-filter">Filter by Category:</Label>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <Label htmlFor="category-filter" className="sm:whitespace-nowrap">Filter by Category:</Label>
         <select
           id="category-filter"
           value={selectedCategoryId}
           onChange={(e) => setSelectedCategoryId(e.target.value)}
-          className="flex h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          className="flex h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 flex-1 sm:flex-initial"
+          aria-label="Filter nominees by category"
         >
           <option value="">All Categories</option>
           {categories?.map((category) => (
@@ -124,16 +107,16 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
       ) : (
         <div className="space-y-6">
           {Array.from(groupedNominees.entries()).map(([categoryId, { categoryName, nominees }]) => (
-            <div key={categoryId}>
-              <h3 className="text-xl font-semibold mb-3">{categoryName}</h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <section key={categoryId} aria-labelledby={`category-${categoryId}`}>
+              <h3 id={`category-${categoryId}`} className="text-xl font-semibold mb-3">{categoryName}</h3>
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label={`Nominees in ${categoryName}`}>
                 {nominees.map((nominee: Nominee) => (
-                  <Card key={nominee.id} className="hover:shadow-md transition-shadow">
+                  <Card key={nominee.id} className="hover:shadow-md transition-shadow" role="listitem">
                     <CardHeader>
                       {nominee.imageUrl && (
                         <img
                           src={nominee.imageUrl}
-                          alt={nominee.name}
+                          alt={`Profile photo of ${nominee.name}`}
                           className="w-full h-48 object-cover rounded-md mb-2"
                         />
                       )}
@@ -148,10 +131,11 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
                         href={nominee.linkedInUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline flex items-center mb-4"
+                        className="text-sm text-blue-600 hover:underline flex items-center mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+                        aria-label={`View ${nominee.name}'s LinkedIn profile (opens in new tab)`}
                       >
                         View LinkedIn Profile
-                        <ExternalLink className="ml-1 h-3 w-3" />
+                        <ExternalLink className="ml-1 h-3 w-3" aria-hidden="true" />
                       </a>
                       <div className="flex justify-end space-x-2">
                         {onEdit && (
@@ -159,8 +143,10 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
                             variant="outline"
                             size="sm"
                             onClick={() => onEdit(nominee)}
+                            aria-label={`Edit ${nominee.name} nominee`}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" aria-hidden="true" />
+                            <span className="sr-only">Edit</span>
                           </Button>
                         )}
                         {onDelete && (
@@ -168,8 +154,10 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
                             variant="outline"
                             size="sm"
                             onClick={() => onDelete(nominee)}
+                            aria-label={`Delete ${nominee.name} nominee`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            <span className="sr-only">Delete</span>
                           </Button>
                         )}
                       </div>
@@ -177,7 +165,7 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
                   </Card>
                 ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}

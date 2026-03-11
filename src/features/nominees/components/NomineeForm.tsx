@@ -190,14 +190,8 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={isSubmitting || mutation.isPending}>
-          {isSubmitting || mutation.isPending
-            ? isEditMode
-              ? 'Updating...'
-              : 'Creating...'
-            : isEditMode
-            ? 'Update Nominee'
-            : 'Create Nominee'}
+        <Button type="submit" loading={isSubmitting || mutation.isPending}>
+          {isEditMode ? 'Update Nominee' : 'Create Nominee'}
         </Button>
       </div>
     </form>
