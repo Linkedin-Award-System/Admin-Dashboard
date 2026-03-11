@@ -124,9 +124,48 @@ npm run test:coverage
 
 ## Environment Variables
 
+The application supports multiple environments with specific configurations:
+
+### Development (`.env.development`)
+- Local development with debug mode enabled
+- API endpoint: `http://localhost:3000/api`
+- Analytics disabled
+
+### Staging (`.env.staging`)
+- Pre-production testing environment
+- API endpoint: `https://staging-api.linkedinwards.et/api`
+- Analytics enabled
+
+### Production (`.env.production`)
+- Production environment
+- API endpoint: `https://api.linkedinwards.et/api`
+- Analytics enabled, debug mode disabled
+
+### Available Environment Variables
+
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `VITE_APP_ENV` | Environment name (development/staging/production) | `development` |
 | `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:3000/api` |
+| `VITE_API_TIMEOUT` | API request timeout in milliseconds | `30000` |
+| `VITE_API_MAX_RETRIES` | Maximum number of retry attempts for failed requests | `3` |
+| `VITE_QUERY_STALE_TIME` | React Query stale time in milliseconds | `30000` |
+| `VITE_QUERY_CACHE_TIME` | React Query cache time in milliseconds | `300000` |
+| `VITE_ENABLE_ANALYTICS` | Enable analytics tracking | `false` |
+| `VITE_ENABLE_DEBUG_MODE` | Enable debug logging | `false` |
+
+### Building for Specific Environments
+
+```bash
+# Development
+npm run build -- --mode development
+
+# Staging
+npm run build -- --mode staging
+
+# Production
+npm run build -- --mode production
+```
 
 ## Backend Database Configuration
 
@@ -138,6 +177,12 @@ The backend should use the following database configuration:
 - **Password**: ********
 
 ## Features
+
+### Performance Optimizations
+- **Code Splitting**: Route-based lazy loading for all pages reduces initial bundle size
+- **React Query Optimizations**: Intelligent cache management and optimistic updates
+- **Image Lazy Loading**: Images load only when needed
+- **Memoization**: Expensive computations are cached to prevent unnecessary recalculations
 
 ### Authentication
 - Secure login with JWT tokens (httpOnly cookies)
