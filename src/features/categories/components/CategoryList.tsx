@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { ExportButton } from '@/features/exports/components/ExportButton';
+import { exportService } from '@/features/exports/services/export-service';
+import { CategoryListSkeleton } from './CategoryListSkeleton';
 import type { Category } from '../types';
 
 interface CategoryListProps {
@@ -36,26 +39,7 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
   }, [categories, searchTerm]);
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-bold">Categories</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mt-2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
+    return <CategoryListSkeleton />;
   }
 
   if (error) {
@@ -78,23 +62,31 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold">Categories</h2>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-2xl sm:text-3xl font-bold">Categories</h2>
         {onCreate && (
-          <Button onClick={onCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={onCreate} aria-label="Add new category" className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             Add Category
           </Button>
         )}
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Input
-          type="text"
+          type="search"
           placeholder="Search categories..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          className="flex-1 sm:max-w-sm"
+          aria-label="Search categories by name or description"
+        />
+        <ExportButton
+          onExport={exportService.exportCategories}
+          filename="categories"
+          label="Export"
+          aria-label="Export categories to CSV"
+          className="w-full sm:w-auto"
         />
       </div>
 
@@ -110,9 +102,9 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="Categories list">
           {filteredAndSortedCategories.map((category) => (
-            <Card key={category.id} className="hover:shadow-md transition-shadow">
+            <Card key={category.id} className="hover:shadow-md transition-shadow" role="listitem">
               <CardHeader>
                 <CardTitle className="text-xl">{category.name}</CardTitle>
                 <CardDescription>
@@ -127,8 +119,10 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
                       variant="outline"
                       size="sm"
                       onClick={() => onEdit(category)}
+                      aria-label={`Edit ${category.name} category`}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                      <span className="sr-only">Edit</span>
                     </Button>
                   )}
                   {onDelete && (
@@ -136,8 +130,10 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
                       variant="outline"
                       size="sm"
                       onClick={() => onDelete(category)}
+                      aria-label={`Delete ${category.name} category`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      <span className="sr-only">Delete</span>
                     </Button>
                   )}
                 </div>

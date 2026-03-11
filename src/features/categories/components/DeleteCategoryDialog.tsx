@@ -84,10 +84,10 @@ export const DeleteCategoryDialog = ({
           {!hasNominees && (
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleteMutation.isPending}
+              loading={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              Delete
             </AlertDialogAction>
           )}
         </AlertDialogFooter>

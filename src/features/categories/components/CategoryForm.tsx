@@ -110,14 +110,8 @@ export const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProp
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={isSubmitting || mutation.isPending}>
-          {isSubmitting || mutation.isPending
-            ? isEditMode
-              ? 'Updating...'
-              : 'Creating...'
-            : isEditMode
-            ? 'Update Category'
-            : 'Create Category'}
+        <Button type="submit" loading={isSubmitting || mutation.isPending}>
+          {isEditMode ? 'Update Category' : 'Create Category'}
         </Button>
       </div>
     </form>
