@@ -1,31 +1,125 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { lazy, Suspense } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthGuard } from '@/features/auth';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { ToastProvider } from '@/shared/hooks/use-toast';
+import { LoadingOverlay } from '@/shared/components/ui/loading-overlay';
+import { useNavigationLoading } from '@/shared/hooks/use-navigation-loading';
+import { config } from '@/lib/config';
+
+// Lazy load pages for code splitting
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const CategoriesPage = lazy(() => import('@/pages/CategoriesPage'));
+const NomineesPage = lazy(() => import('@/pages/NomineesPage'));
+const VotingPage = lazy(() => import('@/pages/VotingPage'));
+const PaymentsPage = lazy(() => import('@/pages/PaymentsPage'));
+const ContentPage = lazy(() => import('@/pages/ContentPage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000, // 30 seconds
-      gcTime: 300000, // 5 minutes (formerly cacheTime)
+      staleTime: config.query.staleTime,
+      gcTime: config.query.cacheTime,
       refetchOnWindowFocus: true,
       retry: 3,
+      // Optimize network requests
+      refetchOnMount: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      // Optimize mutation retries
+      retry: 1,
     },
   },
-})
+});
+
+function AppRoutes() {
+  const isNavigating = useNavigationLoading();
+
+  return (
+    <>
+      <LoadingOverlay visible={isNavigating} />
+      <Suspense fallback={<LoadingOverlay visible={true} />}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <AuthGuard>
+                <DashboardPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/categories"
+            element={
+              <AuthGuard>
+                <CategoriesPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/nominees"
+            element={
+              <AuthGuard>
+                <NomineesPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/voting"
+            element={
+              <AuthGuard>
+                <VotingPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/payments"
+            element={
+              <AuthGuard>
+                <PaymentsPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/content"
+            element={
+              <AuthGuard>
+                <ContentPage />
+              </AuthGuard>
+            }
+          />
+
+          {/* Redirect root to dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          {/* 404 page */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
+    </>
+  );
+}
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto p-8">
-          <h1 className="text-4xl font-bold text-foreground mb-4">
-            LinkedIn Creative Awards Ethiopia
-          </h1>
-          <p className="text-muted-foreground">
-            Admin Dashboard - Project setup complete
-          </p>
-        </div>
-      </div>
-    </QueryClientProvider>
-  )
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
 }
 
-export default App
+export default App;
