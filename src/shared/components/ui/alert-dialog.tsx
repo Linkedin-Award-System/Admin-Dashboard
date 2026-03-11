@@ -91,9 +91,9 @@ AlertDialogDescription.displayName = "AlertDialogDescription"
 
 const AlertDialogAction = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, ...props }, ref) => (
-  <Button ref={ref} className={className} {...props} />
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }
+>(({ className, loading, ...props }, ref) => (
+  <Button ref={ref} className={className} loading={loading} {...props} />
 ))
 AlertDialogAction.displayName = "AlertDialogAction"
 
