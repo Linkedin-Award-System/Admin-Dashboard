@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoginForm } from './LoginForm';
 import { useAuthStore } from '../store/auth-store';
+import type { Mock } from 'vitest';
 
 // Mock the auth store
 vi.mock('../store/auth-store', () => ({
@@ -14,7 +15,7 @@ describe('LoginForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as any).mockImplementation((selector: any) =>
+    (useAuthStore as unknown as Mock).mockImplementation((selector: (state: { login: typeof mockLogin }) => typeof mockLogin) =>
       selector({ login: mockLogin })
     );
   });
@@ -139,6 +140,7 @@ describe('LoginForm', () => {
     await user.click(submitButton);
 
     expect(submitButton).toBeDisabled();
-    expect(screen.getByText(/signing in/i)).toBeInTheDocument();
+    // Button shows spinner but keeps "Sign In" text
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 });

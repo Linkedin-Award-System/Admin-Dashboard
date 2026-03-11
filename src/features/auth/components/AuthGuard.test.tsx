@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthGuard } from './AuthGuard';
 import { useAuthStore } from '../store/auth-store';
+import type { Mock } from 'vitest';
 
 // Mock the auth store
 vi.mock('../store/auth-store', () => ({
@@ -25,7 +26,7 @@ describe('AuthGuard', () => {
   });
 
   it('should render children when authenticated', () => {
-    (useAuthStore as any).mockImplementation((selector: any) =>
+    (useAuthStore as unknown as Mock).mockImplementation((selector: (state: { isAuthenticated: boolean }) => boolean) =>
       selector({ isAuthenticated: true })
     );
 
@@ -41,7 +42,7 @@ describe('AuthGuard', () => {
   });
 
   it('should not render children when not authenticated', () => {
-    (useAuthStore as any).mockImplementation((selector: any) =>
+    (useAuthStore as unknown as Mock).mockImplementation((selector: (state: { isAuthenticated: boolean }) => boolean) =>
       selector({ isAuthenticated: false })
     );
 
@@ -57,7 +58,7 @@ describe('AuthGuard', () => {
   });
 
   it('should redirect to login when not authenticated', () => {
-    (useAuthStore as any).mockImplementation((selector: any) =>
+    (useAuthStore as unknown as Mock).mockImplementation((selector: (state: { isAuthenticated: boolean }) => boolean) =>
       selector({ isAuthenticated: false })
     );
 
@@ -73,7 +74,7 @@ describe('AuthGuard', () => {
   });
 
   it('should not redirect when authenticated', () => {
-    (useAuthStore as any).mockImplementation((selector: any) =>
+    (useAuthStore as unknown as Mock).mockImplementation((selector: (state: { isAuthenticated: boolean }) => boolean) =>
       selector({ isAuthenticated: true })
     );
 

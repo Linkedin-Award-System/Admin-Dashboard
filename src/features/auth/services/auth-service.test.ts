@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { authService } from './auth-service';
 import { apiClient } from '@/lib/api-client-instance';
+import type { Mock } from 'vitest';
 
 // Mock the API client
 vi.mock('@/lib/api-client-instance', () => ({
@@ -28,7 +29,7 @@ describe('authService', () => {
         role: 'admin' as const,
       };
 
-      (apiClient.post as any).mockResolvedValue({
+      (apiClient.post as Mock).mockResolvedValue({
         user: mockUser,
       });
 
@@ -52,7 +53,7 @@ describe('authService', () => {
         role: 'admin' as const,
       };
 
-      (apiClient.post as any).mockResolvedValue({
+      (apiClient.post as Mock).mockResolvedValue({
         user: mockUser,
         token: 'test-token-123',
       });
@@ -73,7 +74,7 @@ describe('authService', () => {
         role: 'admin' as const,
       };
 
-      (apiClient.post as any).mockResolvedValue({
+      (apiClient.post as Mock).mockResolvedValue({
         user: mockUser,
       });
 
@@ -89,7 +90,7 @@ describe('authService', () => {
   describe('logout', () => {
     it('should call logout API and clear token', async () => {
       localStorage.setItem('auth_token', 'test-token');
-      (apiClient.post as any).mockResolvedValue({});
+      (apiClient.post as Mock).mockResolvedValue({});
 
       await authService.logout();
 
@@ -99,7 +100,7 @@ describe('authService', () => {
 
     it('should clear token even if API call fails', async () => {
       localStorage.setItem('auth_token', 'test-token');
-      (apiClient.post as any).mockRejectedValue(new Error('Network error'));
+      (apiClient.post as Mock).mockRejectedValue(new Error('Network error'));
 
       await authService.logout();
 
