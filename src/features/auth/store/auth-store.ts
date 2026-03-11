@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AuthState, AuthUser, LoginCredentials } from '../types';
+import type { AuthState, LoginCredentials } from '../types';
 import { authService } from '../services/auth-service';
 
 const TOKEN_KEY = 'auth_token';
