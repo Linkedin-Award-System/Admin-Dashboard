@@ -1,15 +1,47 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { z } from 'zod';
 import fc from 'fast-check';
 import { createAPIClient, type APIClientConfig, type APIError } from './api-client';
+import type { Mock } from 'vitest';
+
+// Define types for mock axios instance
+interface MockAxiosInstance {
+  get: Mock;
+  post: Mock;
+  put: Mock;
+  delete: Mock;
+  interceptors: {
+    request: {
+      use: Mock;
+    };
+    response: {
+      use: Mock;
+    };
+  };
+  request: Mock;
+  _requestInterceptor?: {
+    onFulfilled: (config: unknown) => unknown;
+    onRejected: (error: unknown) => unknown;
+  };
+  _responseInterceptor?: {
+    onFulfilled: (response: unknown) => unknown;
+    onRejected: (error: unknown) => unknown;
+  };
+}
+
+// Helper to create a mock axios config
+const createMockAxiosConfig = (overrides?: Partial<InternalAxiosRequestConfig>): InternalAxiosRequestConfig => ({
+  headers: {},
+  ...overrides,
+} as InternalAxiosRequestConfig);
 
 // Mock axios
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);
 
 describe('API Client', () => {
-  let mockAxiosInstance: any;
+  let mockAxiosInstance: MockAxiosInstance;
   let getAuthToken: () => string | null;
   let onAuthError: () => void;
   let config: APIClientConfig;
@@ -49,7 +81,7 @@ describe('API Client', () => {
       request: vi.fn(),
     };
 
-    mockedAxios.create.mockReturnValue(mockAxiosInstance);
+    mockedAxios.create.mockReturnValue(mockAxiosInstance as never);
   });
 
   afterEach(() => {
@@ -154,9 +186,9 @@ describe('API Client', () => {
           },
           statusText: 'Unauthorized',
           headers: {},
-          config: {} as any,
+          config: createMockAxiosConfig(),
         },
-        config: {} as any,
+        config: createMockAxiosConfig(),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -185,9 +217,9 @@ describe('API Client', () => {
           },
           statusText: 'Forbidden',
           headers: {},
-          config: {} as any,
+          config: createMockAxiosConfig(),
         },
-        config: {} as any,
+        config: createMockAxiosConfig(),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -214,9 +246,9 @@ describe('API Client', () => {
           },
           statusText: 'Not Found',
           headers: {},
-          config: {} as any,
+          config: createMockAxiosConfig(),
         },
-        config: {} as any,
+        config: createMockAxiosConfig(),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -246,9 +278,9 @@ describe('API Client', () => {
           },
           statusText: 'Unprocessable Entity',
           headers: {},
-          config: {} as any,
+          config: createMockAxiosConfig(),
         },
-        config: {} as any,
+        config: createMockAxiosConfig(),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -275,9 +307,9 @@ describe('API Client', () => {
           },
           statusText: 'Internal Server Error',
           headers: {},
-          config: {} as any,
+          config: createMockAxiosConfig(),
         },
-        config: {} as any,
+        config: createMockAxiosConfig(),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -431,7 +463,7 @@ describe('API Client', () => {
 
       const error: Partial<AxiosError> = {
         code: 'ERR_NETWORK',
-        config: {} as any,
+        config: createMockAxiosConfig(),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -455,7 +487,7 @@ describe('API Client', () => {
 
       const error: Partial<AxiosError> = {
         code: 'ERR_NETWORK',
-        config: { skipRetry: true } as any,
+        config: createMockAxiosConfig({ skipRetry: true } as never),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -474,7 +506,7 @@ describe('API Client', () => {
 
       const error: Partial<AxiosError> = {
         code: 'ECONNABORTED',
-        config: { __retryCount: 3 } as any,
+        config: createMockAxiosConfig({ __retryCount: 3 } as never),
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
@@ -536,9 +568,9 @@ describe('API Client', () => {
                 },
                 statusText: 'Error',
                 headers: {},
-                config: {} as any,
+                config: createMockAxiosConfig(),
               },
-              config: {} as any,
+              config: createMockAxiosConfig(),
               isAxiosError: true,
               toJSON: () => ({}),
               name: 'AxiosError',
@@ -593,3 +625,6 @@ describe('API Client', () => {
     });
   });
 });
+
+
+

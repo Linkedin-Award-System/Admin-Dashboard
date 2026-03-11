@@ -12,7 +12,7 @@ export interface RequestConfig extends AxiosRequestConfig {
   validationSchema?: z.ZodSchema;
 }
 
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   data: T;
   message?: string;
   timestamp: string;
@@ -37,8 +37,8 @@ export interface APIClientConfig {
 
 export interface APIClient {
   get<T>(url: string, config?: RequestConfig): Promise<T>;
-  post<T>(url: string, data?: any, config?: RequestConfig): Promise<T>;
-  put<T>(url: string, data?: any, config?: RequestConfig): Promise<T>;
+  post<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+  put<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
   delete<T>(url: string, config?: RequestConfig): Promise<T>;
 }
 
@@ -141,10 +141,10 @@ class APIClientImpl implements APIClient {
           const skipRetry = (error.config as RequestConfig)?.skipRetry;
           
           if (!skipRetry && error.config) {
-            const retryCount = (error.config as any).__retryCount || 0;
+            const retryCount = (error.config as RequestConfig & { __retryCount?: number }).__retryCount || 0;
             
             if (retryCount < this.config.maxRetries) {
-              (error.config as any).__retryCount = retryCount + 1;
+              (error.config as RequestConfig & { __retryCount?: number }).__retryCount = retryCount + 1;
               
               // Exponential backoff: 100ms, 200ms, 400ms
               const delay = 100 * Math.pow(2, retryCount);
@@ -193,12 +193,12 @@ class APIClientImpl implements APIClient {
     return response.data.data;
   }
 
-  async post<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
+  async post<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.post<APIResponse<T>>(url, data, config);
     return response.data.data;
   }
 
-  async put<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
+  async put<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.put<APIResponse<T>>(url, data, config);
     return response.data.data;
   }
