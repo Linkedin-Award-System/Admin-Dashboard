@@ -13,6 +13,7 @@ export interface RequestConfig extends AxiosRequestConfig {
 }
 
 export interface APIResponse<T = unknown> {
+  success: boolean;
   data: T;
   message?: string;
   timestamp: string;
@@ -39,6 +40,7 @@ export interface APIClient {
   get<T>(url: string, config?: RequestConfig): Promise<T>;
   post<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
   put<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+  patch<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
   delete<T>(url: string, config?: RequestConfig): Promise<T>;
 }
 
@@ -200,6 +202,11 @@ class APIClientImpl implements APIClient {
 
   async put<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.put<APIResponse<T>>(url, data, config);
+    return response.data.data;
+  }
+
+  async patch<T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
+    const response = await this.axiosInstance.patch<APIResponse<T>>(url, data, config);
     return response.data.data;
   }
 
