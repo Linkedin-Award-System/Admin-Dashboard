@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNominees } from '../hooks/use-nominees';
 import { useCategories } from '@/features/categories/hooks/use-categories';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
+import { Button, Card, PageHeader } from '@/shared/design-system';
 import { Label } from '@/shared/components/ui/label';
-import { Pencil, Trash2, Plus, ExternalLink } from 'lucide-react';
+import { Badge } from '@/shared/components/ui/badge';
+import { Pencil, Trash2, Plus, Users, Filter, Linkedin } from 'lucide-react';
 import { NomineeListSkeleton } from './NomineeListSkeleton';
 import type { Nominee } from '../types';
+import { formatNumber } from '@/features/dashboard/utils/format-utils';
 
 interface NomineeListProps {
   onEdit?: (nominee: Nominee) => void;
@@ -19,25 +20,20 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
   const { data: nominees, isLoading, error } = useNominees(selectedCategoryId || undefined);
   const { data: categories } = useCategories();
 
-  // Group nominees by category
   const groupedNominees = useMemo(() => {
     if (!nominees || !categories) return new Map();
 
     const grouped = new Map<string, { categoryName: string; nominees: Nominee[] }>();
 
     nominees.forEach((nominee) => {
-      nominee.categories.forEach((categoryId) => {
-        const category = categories.find((c) => c.id === categoryId);
-        if (category) {
-          if (!grouped.has(categoryId)) {
-            grouped.set(categoryId, { categoryName: category.name, nominees: [] });
-          }
-          grouped.get(categoryId)!.nominees.push(nominee);
+      nominee.categories.forEach((category) => {
+        if (!grouped.has(category.id)) {
+          grouped.set(category.id, { categoryName: category.name, nominees: [] });
         }
+        grouped.get(category.id)!.nominees.push(nominee);
       });
     });
 
-    // Sort categories alphabetically
     return new Map([...grouped.entries()].sort((a, b) => a[1].categoryName.localeCompare(b[1].categoryName)));
   }, [nominees, categories]);
 
@@ -47,121 +43,174 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
 
   if (error) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-bold">Nominees</h2>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center bg-white/50 backdrop-blur-md p-6 rounded-3xl border border-border-light shadow-sm">
+          <h2 className="text-3xl font-bold text-text-primary tracking-tight">Nominees</h2>
         </div>
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-800">Error Loading Nominees</CardTitle>
-            <CardDescription className="text-red-600">
-              {error instanceof Error ? error.message : 'An error occurred while loading nominees'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="p-8 rounded-3xl border border-red-100 bg-red-50/50 backdrop-blur-sm text-center">
+          <h3 className="text-xl font-bold text-red-800">Error Loading Nominees</h3>
+          <p className="text-red-600 mt-2 max-w-md mx-auto">
+            {error instanceof Error ? error.message : 'An error occurred while loading nominees'}
+          </p>
+          <Button variant="secondary" className="mt-6 border-red-200 text-red-700 hover:bg-red-100" onClick={() => window.location.reload()}>
+            Retry Loading
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h2 className="text-2xl sm:text-3xl font-bold">Nominees</h2>
-        {onCreate && (
-          <Button onClick={onCreate} aria-label="Add new nominee" className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Add Nominee
-          </Button>
-        )}
-      </div>
+    <div className="space-y-8">
+      {/* Header Section - Using PageHeader component */}
+      <PageHeader
+        title="Nominees"
+        subtitle="Manage all participants and their voting statuses"
+        actions={
+          onCreate && (
+            <Button onClick={onCreate} variant="primary" style={{ backgroundColor: '#085299', color: '#ffffff' }} className="rounded-2xl shadow-lg shadow-primary-500/20 px-6 h-12 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
+              <Plus className="mr-2 h-5 w-5 stroke-[3px]" />
+              Add Nominee
+            </Button>
+          )
+        }
+      />
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <Label htmlFor="category-filter" className="sm:whitespace-nowrap">Filter by Category:</Label>
-        <select
-          id="category-filter"
-          value={selectedCategoryId}
-          onChange={(e) => setSelectedCategoryId(e.target.value)}
-          className="flex h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 flex-1 sm:flex-initial"
-          aria-label="Filter nominees by category"
-        >
-          <option value="">All Categories</option>
-          {categories?.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
+      {/* Modern Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-center gap-4 bg-bg-tertiary/30 p-4 rounded-[1.5rem] border border-border-light ring-1 ring-black/5">
+        <div className="flex items-center gap-3 pl-2 flex-1 w-full sm:w-auto">
+          <Filter className="text-text-tertiary" size={20} />
+          <Label htmlFor="category-filter" className="text-sm font-bold text-text-secondary whitespace-nowrap">Group by Category:</Label>
+          <select
+            id="category-filter"
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
+            className="flex h-11 w-full sm:w-64 rounded-xl border border-border-light bg-white px-3 py-2 text-sm font-bold text-text-primary shadow-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
+          >
+            <option value="">All Categories</option>
+            {categories?.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {groupedNominees.size === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Nominees Found</CardTitle>
-            <CardDescription>
-              {selectedCategoryId
-                ? 'No nominees found for the selected category.'
-                : 'Get started by creating your first nominee.'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="py-20 text-center bg-white/50 backdrop-blur-md rounded-[2.5rem] border border-border-light border-dashed">
+          <div className="w-20 h-20 bg-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="text-text-tertiary" size={40} />
+          </div>
+          <h3 className="text-xl font-bold text-text-primary">No Nominees Found</h3>
+          <p className="text-text-tertiary mt-2">
+            {selectedCategoryId
+              ? 'No nominees found for the selected category.'
+              : 'Create your first nominee to populate the dashboard.'}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-6">
-          {Array.from(groupedNominees.entries()).map(([categoryId, { categoryName, nominees }]) => (
-            <section key={categoryId} aria-labelledby={`category-${categoryId}`}>
-              <h3 id={`category-${categoryId}`} className="text-xl font-semibold mb-3">{categoryName}</h3>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label={`Nominees in ${categoryName}`}>
+        <div className="space-y-12">
+          {Array.from(groupedNominees.entries()).map(([categoryId, { categoryName, nominees }], catIdx) => (
+            <section key={categoryId} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: `${catIdx * 100}ms` }}>
+              <div className="flex items-center gap-4">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border-light to-transparent" />
+                <h3 className="text-sm font-black text-text-tertiary uppercase tracking-[0.2em] bg-bg-primary px-6">
+                  {categoryName}
+                </h3>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border-light to-transparent" />
+              </div>
+
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                 {nominees.map((nominee: Nominee) => (
-                  <Card key={nominee.id} className="hover:shadow-md transition-shadow" role="listitem">
-                    <CardHeader>
-                      {nominee.imageUrl && (
-                        <img
-                          src={nominee.imageUrl}
-                          alt={`Profile photo of ${nominee.name}`}
-                          className="w-full h-48 object-cover rounded-md mb-2"
-                        />
+                  <Card
+                    key={nominee.id}
+                    hoverable
+                    padding="none"
+                    className="group relative overflow-hidden"
+                  >
+                    {/* Header: Photo & Name Area */}
+                    <div className="relative">
+                      {nominee.profileImageUrl ? (
+                        <div className="h-56 w-full overflow-hidden">
+                          <img
+                            src={nominee.profileImageUrl}
+                            alt={nominee.fullName}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-56 w-full bg-gradient-to-br from-primary-50 to-purple-50 flex items-center justify-center">
+                          <span className="text-6xl font-black text-primary-200">{nominee.fullName.charAt(0)}</span>
+                        </div>
                       )}
-                      <CardTitle className="text-xl">{nominee.name}</CardTitle>
-                      <CardDescription>
-                        {nominee.voteCount} {nominee.voteCount === 1 ? 'vote' : 'votes'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-3">{nominee.description}</p>
-                      <a
-                        href={nominee.linkedInUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline flex items-center mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
-                        aria-label={`View ${nominee.name}'s LinkedIn profile (opens in new tab)`}
-                      >
-                        View LinkedIn Profile
-                        <ExternalLink className="ml-1 h-3 w-3" aria-hidden="true" />
-                      </a>
-                      <div className="flex justify-end space-x-2">
-                        {onEdit && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEdit(nominee)}
-                            aria-label={`Edit ${nominee.name} nominee`}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                        )}
-                        {onDelete && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onDelete(nominee)}
-                            aria-label={`Delete ${nominee.name} nominee`}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        )}
+                      
+                      {/* Vote Count Overlay */}
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <div className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-white/50 shadow-lg flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-text-tertiary uppercase tracking-wider">Total Votes</span>
+                            <span className="text-xl font-black text-primary-600">{formatNumber(nominee.voteCount)}</span>
+                          </div>
+                          <Badge className="bg-primary-600 text-white rounded-xl py-1.5 px-3 font-black text-xs">
+                            Active
+                          </Badge>
+                        </div>
                       </div>
-                    </CardContent>
+                    </div>
+
+                    <div className="p-7 pt-5">
+                      {/* Identity */}
+                      <div className="mb-4">
+                        <h4 className="text-xl font-black text-text-primary group-hover:text-primary-600 transition-colors line-clamp-1">
+                          {nominee.fullName}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-lg">{nominee.organization}</span>
+                        </div>
+                      </div>
+
+                      {/* Bio */}
+                      <p className="text-text-tertiary text-sm leading-relaxed font-medium line-clamp-2 mb-6 h-10">
+                        {nominee.shortBiography}
+                      </p>
+
+                      {/* Footer Actions */}
+                      <div className="flex items-center gap-3 pt-6 border-t border-border-light/50">
+                        <a
+                          href={nominee.linkedInProfileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl bg-[#0a66c2]/5 text-[#0a66c2] hover:bg-[#0a66c2] hover:text-white font-bold text-xs transition-all duration-300"
+                        >
+                          <Linkedin size={14} />
+                          LinkedIn
+                        </a>
+                        
+                        <div className="flex items-center gap-2">
+                          {onEdit && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => onEdit(nominee)}
+                              className="h-10 w-10 rounded-xl transition-all group/edit shadow-sm"
+                            >
+                              <Pencil size={18} />
+                            </Button>
+                          )}
+                          {onDelete && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => onDelete(nominee)}
+                              className="h-10 w-10 rounded-xl transition-all group/delete shadow-sm"
+                            >
+                              <Trash2 size={18} />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </Card>
                 ))}
               </div>
