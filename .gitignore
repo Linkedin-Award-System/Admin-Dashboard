@@ -57,3 +57,18 @@ Thumbs.db
 .cache
 .temp
 .tmp
+
+# Temporary documentation files
+TASK_*.md
+TEST_*.md
+DEBUG_*.md
+*_FIX_*.md
+*_COMPLETE*.md
+*_SUMMARY*.md
+*_STATUS*.md
+*_ISSUE*.md
+*_VERIFICATION*.md
+*_CHANGES*.md
+START_*.md
+WORK_*.md
+test-api-integration.md

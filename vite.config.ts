@@ -10,4 +10,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://linkedin-creative-awards-api-production.up.railway.app',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path,
+      },
+    },
+  },
 })
