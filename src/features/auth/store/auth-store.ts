@@ -19,17 +19,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null, isAuthenticated: false });
   },
 
-  checkAuth: () => {
-    // Check if token exists in localStorage on initialization
+  checkAuth: async () => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
-      // Token exists, but we need to validate it with the server
-      // For now, we'll just set a flag that token exists
-      // The actual validation will happen on the first API call
-      set({ isAuthenticated: true });
+      try {
+        // Optimistically set authenticated while fetching profile
+        set({ isAuthenticated: true });
+        const user = await authService.getProfile();
+        set({ user, isAuthenticated: true });
+      } catch (error) {
+        console.error('Session restoration failed:', error);
+        localStorage.removeItem(TOKEN_KEY);
+        set({ user: null, isAuthenticated: false });
+      }
     }
   },
 }));
 
-// Initialize auth state on store creation
+// Initialize auth state
 useAuthStore.getState().checkAuth();

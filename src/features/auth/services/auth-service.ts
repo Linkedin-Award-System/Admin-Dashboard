@@ -10,22 +10,39 @@ interface LoginResponse {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthUser> {
-    const response = await apiClient.post<LoginResponse>(
-      '/auth/login',
-      credentials
-    );
+    console.log('Auth service: Calling API with credentials:', { email: credentials.email });
+    console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
+    
+    try {
+      const response = await apiClient.post<LoginResponse>(
+        '/admin/auth/login',
+        credentials
+      );
 
-    // Store token if provided (fallback for non-httpOnly cookie setup)
-    if (response.token) {
-      localStorage.setItem(TOKEN_KEY, response.token);
+      console.log('Auth service: Received response:', response);
+
+      // Store token (API returns token in response body)
+      if (response.token) {
+        console.log('Auth service: Storing token');
+        localStorage.setItem(TOKEN_KEY, response.token);
+      } else {
+        console.warn('Auth service: No token in response');
+      }
+
+      return response.user;
+    } catch (error) {
+      console.error('Auth service: Login failed:', error);
+      throw error;
     }
+  },
 
-    return response.user;
+  async getProfile(): Promise<AuthUser> {
+    return apiClient.get<AuthUser>('/admin/auth/me');
   },
 
   async logout(): Promise<void> {
     try {
-      await apiClient.post('/auth/logout');
+      await apiClient.post('/admin/auth/logout');
     } catch (error) {
       // Continue with logout even if API call fails
       console.error('Logout API call failed:', error);

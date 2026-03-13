@@ -1,132 +1,107 @@
 /**
  * Export Service
  * Handles data export operations for categories, vote stats, and payments
+ * Uses server-side CSV export endpoints
  */
 
-import { apiClient } from '@/lib/api-client-instance';
-import { generateCSV } from '../utils/csv-generator';
-import { generatePDF, type PDFGenerationOptions } from '../utils/pdf-generator';
 import type { ExportFormat } from '../types';
-import type { Category } from '@/features/categories/types';
-import type { VoteStats } from '@/features/voting/types';
-import type { PaymentTransaction, PaymentFilters } from '@/features/payments/types';
+import type { PaymentFilters } from '@/features/payments/types';
 import type { DateRange } from '@/features/voting/types';
 
 export const exportService = {
   /**
-   * Export categories with their nominees
+   * Export categories - uses server CSV endpoint
    */
   async exportCategories(format: ExportFormat): Promise<Blob> {
     if (format === 'csv') {
-      // Fetch categories data
-      const categories = await apiClient.get<Category[]>('/categories');
+      // Use server-side CSV export
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/categories/export`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
       
-      // Define CSV headers
-      const headers = [
-        { key: 'id' as keyof Category, label: 'ID' },
-        { key: 'name' as keyof Category, label: 'Name' },
-        { key: 'description' as keyof Category, label: 'Description' },
-        { key: 'nomineeCount' as keyof Category, label: 'Nominee Count' },
-        { key: 'createdAt' as keyof Category, label: 'Created At' },
-        { key: 'updatedAt' as keyof Category, label: 'Updated At' },
-      ];
+      if (!response.ok) {
+        throw new Error('Failed to export categories');
+      }
       
-      return generateCSV(categories as unknown as Record<string, unknown>[], headers);
+      return response.blob();
     } else {
       // PDF generation via server-side API
-      return generatePDF('/exports/categories/pdf');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/categories/export?format=pdf`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export categories as PDF');
+      }
+      
+      return response.blob();
     }
   },
 
   /**
-   * Export vote statistics
+   * Export vote statistics - uses server CSV endpoint
    */
   async exportVoteStats(format: ExportFormat, dateRange?: DateRange): Promise<Blob> {
-    if (format === 'csv') {
-      // Fetch vote stats data
-      const params = dateRange ? { 
-        startDate: dateRange.startDate, 
-        endDate: dateRange.endDate 
-      } : undefined;
-      
-      const voteStats = await apiClient.get<VoteStats[]>('/voting/stats', { params });
-      
-      // Flatten the data for CSV export
-      const flattenedData = voteStats.flatMap(category => 
-        category.nominees.map(nominee => ({
-          categoryId: category.categoryId,
-          categoryName: category.categoryName,
-          categoryTotalVotes: category.totalVotes,
-          nomineeId: nominee.nomineeId,
-          nomineeName: nominee.nomineeName,
-          nomineeVoteCount: nominee.voteCount,
-          nomineePercentage: nominee.percentage,
-          isLeading: category.leadingNominee.id === nominee.nomineeId,
-        }))
-      );
-      
-      // Define CSV headers
-      const headers = [
-        { key: 'categoryId' as const, label: 'Category ID' },
-        { key: 'categoryName' as const, label: 'Category Name' },
-        { key: 'categoryTotalVotes' as const, label: 'Category Total Votes' },
-        { key: 'nomineeId' as const, label: 'Nominee ID' },
-        { key: 'nomineeName' as const, label: 'Nominee Name' },
-        { key: 'nomineeVoteCount' as const, label: 'Nominee Vote Count' },
-        { key: 'nomineePercentage' as const, label: 'Nominee Percentage' },
-        { key: 'isLeading' as const, label: 'Is Leading' },
-      ];
-      
-      return generateCSV(flattenedData, headers);
-    } else {
-      // PDF generation via server-side API
-      const params = dateRange ? { 
-        startDate: dateRange.startDate, 
-        endDate: dateRange.endDate,
-        includeCharts: true,
-      } : { includeCharts: true };
-      
-      return generatePDF('/exports/vote-stats/pdf', params);
+    const params = new URLSearchParams();
+    
+    if (dateRange) {
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
     }
+    
+    if (format === 'pdf') {
+      params.append('format', 'pdf');
+    }
+    
+    const queryString = params.toString();
+    const url = `${import.meta.env.VITE_API_BASE_URL}/admin/votes/export${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to export vote statistics');
+    }
+    
+    return response.blob();
   },
 
   /**
-   * Export payment transactions
+   * Export payment transactions - uses server CSV endpoint
    */
   async exportPayments(format: ExportFormat, filters?: PaymentFilters): Promise<Blob> {
-    if (format === 'csv') {
-      // Fetch payment transactions
-      const params = filters ? {
-        status: filters.status,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-      } : undefined;
-      
-      const payments = await apiClient.get<PaymentTransaction[]>('/payments', { params });
-      
-      // Define CSV headers
-      const headers = [
-        { key: 'id' as keyof PaymentTransaction, label: 'ID' },
-        { key: 'transactionId' as keyof PaymentTransaction, label: 'Transaction ID' },
-        { key: 'amount' as keyof PaymentTransaction, label: 'Amount' },
-        { key: 'currency' as keyof PaymentTransaction, label: 'Currency' },
-        { key: 'status' as keyof PaymentTransaction, label: 'Status' },
-        { key: 'payerName' as keyof PaymentTransaction, label: 'Payer Name' },
-        { key: 'payerEmail' as keyof PaymentTransaction, label: 'Payer Email' },
-        { key: 'createdAt' as keyof PaymentTransaction, label: 'Created At' },
-        { key: 'updatedAt' as keyof PaymentTransaction, label: 'Updated At' },
-      ];
-      
-      return generateCSV(payments as unknown as Record<string, unknown>[], headers);
-    } else {
-      // PDF generation via server-side API
-      const params: PDFGenerationOptions | undefined = filters ? {
-        status: filters.status,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-      } : undefined;
-      
-      return generatePDF('/exports/payments/pdf', params);
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      if (filters.status) params.append('status', filters.status);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
     }
+    
+    if (format === 'pdf') {
+      params.append('format', 'pdf');
+    }
+    
+    const queryString = params.toString();
+    const url = `${import.meta.env.VITE_API_BASE_URL}/admin/payments/export${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to export payments');
+    }
+    
+    return response.blob();
   },
 };
