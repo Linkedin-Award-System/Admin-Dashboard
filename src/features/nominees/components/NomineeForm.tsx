@@ -5,8 +5,7 @@ import { nomineeSchema, type NomineeSchemaType } from '../schemas/nominee-schema
 import { useCreateNominee, useUpdateNominee } from '../hooks/use-nominees';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
+import { Input } from '@/shared/design-system/components/Input/Input';
 import type { Nominee } from '../types';
 
 interface NomineeFormProps {
@@ -31,11 +30,12 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
   } = useForm<NomineeSchemaType>({
     resolver: zodResolver(nomineeSchema),
     defaultValues: {
-      name: nominee?.name || '',
-      linkedInUrl: nominee?.linkedInUrl || '',
-      description: nominee?.description || '',
-      imageUrl: nominee?.imageUrl || '',
-      categoryIds: nominee?.categories || [],
+      fullName: nominee?.fullName || '',
+      linkedInProfileUrl: nominee?.linkedInProfileUrl || '',
+      organization: nominee?.organization || '',
+      shortBiography: nominee?.shortBiography || '',
+      profileImageUrl: nominee?.profileImageUrl || '',
+      categoryIds: nominee?.categories?.map(c => c.id) || [],
     },
   });
 
@@ -45,11 +45,12 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
   useEffect(() => {
     if (nominee) {
       reset({
-        name: nominee.name,
-        linkedInUrl: nominee.linkedInUrl,
-        description: nominee.description,
-        imageUrl: nominee.imageUrl || '',
-        categoryIds: nominee.categories,
+        fullName: nominee.fullName,
+        linkedInProfileUrl: nominee.linkedInProfileUrl,
+        organization: nominee.organization,
+        shortBiography: nominee.shortBiography,
+        profileImageUrl: nominee.profileImageUrl || '',
+        categoryIds: nominee.categories?.map(c => c.id) || [],
       });
     }
   }, [nominee, reset]);
@@ -64,10 +65,10 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
 
   const onSubmit = async (data: NomineeSchemaType) => {
     try {
-      // Clean up empty imageUrl
+      // Clean up empty profileImageUrl
       const submitData = {
         ...data,
-        imageUrl: data.imageUrl || undefined,
+        profileImageUrl: data.profileImageUrl || undefined,
       };
 
       if (isEditMode) {
@@ -88,70 +89,68 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input
-          id="name"
-          {...register('name')}
-          placeholder="Enter nominee name"
-          aria-invalid={errors.name ? 'true' : 'false'}
-        />
-        {errors.name && (
-          <p className="text-sm text-red-600" role="alert">
-            {errors.name.message}
-          </p>
-        )}
-      </div>
+      <Input
+        id="fullName"
+        label="Full Name"
+        {...register('fullName')}
+        placeholder="Enter nominee full name"
+        error={errors.fullName?.message}
+        aria-invalid={errors.fullName ? 'true' : 'false'}
+      />
+
+      <Input
+        id="linkedInProfileUrl"
+        label="LinkedIn Profile URL"
+        {...register('linkedInProfileUrl')}
+        placeholder="https://linkedin.com/in/username"
+        error={errors.linkedInProfileUrl?.message}
+        aria-invalid={errors.linkedInProfileUrl ? 'true' : 'false'}
+      />
+
+      <Input
+        id="organization"
+        label="Organization"
+        {...register('organization')}
+        placeholder="Enter organization name"
+        error={errors.organization?.message}
+        aria-invalid={errors.organization ? 'true' : 'false'}
+      />
 
       <div className="space-y-2">
-        <Label htmlFor="linkedInUrl">LinkedIn URL</Label>
-        <Input
-          id="linkedInUrl"
-          {...register('linkedInUrl')}
-          placeholder="https://linkedin.com/in/username"
-          aria-invalid={errors.linkedInUrl ? 'true' : 'false'}
-        />
-        {errors.linkedInUrl && (
-          <p className="text-sm text-red-600" role="alert">
-            {errors.linkedInUrl.message}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <label
+          htmlFor="shortBiography"
+          className="block mb-2 text-sm font-medium text-gray-900"
+        >
+          Short Biography
+        </label>
         <textarea
-          id="description"
-          {...register('description')}
-          placeholder="Enter nominee description"
-          className="flex min-h-[100px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-invalid={errors.description ? 'true' : 'false'}
+          id="shortBiography"
+          {...register('shortBiography')}
+          placeholder="Enter nominee biography"
+          className="flex min-h-[100px] w-full rounded-lg border px-3 py-3 text-sm bg-white transition-all duration-200 placeholder:text-gray-400 focus:outline-none focus:border-2 focus:border-primary-600 focus:ring-0 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50 border-gray-300"
+          aria-invalid={errors.shortBiography ? 'true' : 'false'}
         />
-        {errors.description && (
-          <p className="text-sm text-red-600" role="alert">
-            {errors.description.message}
+        {errors.shortBiography && (
+          <p className="mt-1.5 text-xs text-red-500" role="alert">
+            {errors.shortBiography.message}
           </p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="imageUrl">Image URL (Optional)</Label>
-        <Input
-          id="imageUrl"
-          {...register('imageUrl')}
-          placeholder="https://example.com/image.jpg"
-          aria-invalid={errors.imageUrl ? 'true' : 'false'}
-        />
-        {errors.imageUrl && (
-          <p className="text-sm text-red-600" role="alert">
-            {errors.imageUrl.message}
-          </p>
-        )}
-      </div>
+      <Input
+        id="profileImageUrl"
+        label="Profile Image URL (Optional)"
+        {...register('profileImageUrl')}
+        placeholder="https://example.com/image.jpg"
+        error={errors.profileImageUrl?.message}
+        aria-invalid={errors.profileImageUrl ? 'true' : 'false'}
+      />
 
       <div className="space-y-2">
-        <Label>Categories (Select at least one)</Label>
-        <div className="border border-gray-300 rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+        <label className="block mb-2 text-sm font-medium text-gray-900">
+          Categories (Select at least one)
+        </label>
+        <div className="border border-gray-300 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
           {categories?.map((category) => (
             <label
               key={category.id}
@@ -168,7 +167,7 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
           ))}
         </div>
         {errors.categoryIds && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="mt-1.5 text-xs text-red-500" role="alert">
             {errors.categoryIds.message}
           </p>
         )}
@@ -186,11 +185,11 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
 
       <div className="flex justify-end space-x-2">
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} style={{ backgroundColor: '#ffffff', color: '#085299', border: '2px solid #085299' }} className="hover:bg-primary-50 transition-all duration-200">
             Cancel
           </Button>
         )}
-        <Button type="submit" loading={isSubmitting || mutation.isPending}>
+        <Button type="submit" loading={isSubmitting || mutation.isPending} style={{ backgroundColor: '#085299', color: '#ffffff' }}>
           {isEditMode ? 'Update Nominee' : 'Create Nominee'}
         </Button>
       </div>
