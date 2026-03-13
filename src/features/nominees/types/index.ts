@@ -1,19 +1,21 @@
 export interface Nominee {
   id: string;
-  name: string;
-  linkedInUrl: string;
-  description: string;
-  imageUrl?: string;
-  categories: string[]; // Category IDs
+  fullName: string;
+  linkedInProfileUrl: string;
+  shortBiography: string;
+  organization: string;
+  profileImageUrl?: string;
+  categories: Array<{ id: string; name: string }>; // Category objects
   voteCount: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface NomineeFormData {
-  name: string;
-  linkedInUrl: string;
-  description: string;
-  imageUrl?: string;
+  fullName: string;
+  linkedInProfileUrl: string;
+  shortBiography: string;
+  organization: string;
+  profileImageUrl?: string;
   categoryIds: string[];
 }
