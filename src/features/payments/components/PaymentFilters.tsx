@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import { Select } from '@/shared/components/ui/select';
+import { Filter, Calendar, X, CheckCircle2 } from 'lucide-react';
 import type { PaymentFilters as PaymentFiltersType } from '../types';
 
 interface PaymentFiltersProps {
@@ -70,66 +69,79 @@ export const PaymentFiltersForm = ({ onFilterChange }: PaymentFiltersProps) => {
   const hasFilters = status || (startDate && endDate);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Filter Transactions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select
-              id="status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-              <option value="refunded">Refunded</option>
-            </Select>
-          </div>
-          
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+    <div className="bg-white p-8 rounded-[2.5rem] border border-border-light shadow-soft space-y-8">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em] flex items-center gap-2">
+          <Filter size={14} /> Filter Intelligence
+        </h3>
+        {hasFilters && (
+          <button 
+            onClick={handleClearFilter}
+            className="text-[10px] font-black text-primary-600 hover:text-primary-700 underline underline-offset-4 flex items-center gap-1"
+          >
+            <X size={10} /> Clear Specs
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="status" className="text-xs font-black text-text-secondary uppercase tracking-widest pl-1">Settlement Status</Label>
+          <select
+            id="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="flex h-12 w-full rounded-2xl border border-border-light bg-bg-tertiary/30 px-4 py-2 text-sm font-bold text-text-primary shadow-inner focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none appearance-none cursor-pointer"
+          >
+            <option value="">All Transactions</option>
+            <option value="PENDING">Pending (Awaiting Sync)</option>
+            <option value="COMPLETED">Completed (Settled)</option>
+            <option value="FAILED">Failed (Voided)</option>
+            <option value="REFUNDED">Refunded</option>
+          </select>
+        </div>
+        
+        <div className="space-y-4">
+          <Label className="text-xs font-black text-text-secondary uppercase tracking-widest pl-1 flex items-center gap-2">
+            <Calendar size={14} className="text-text-tertiary" /> Temporal Range
+          </Label>
+          <div className="grid gap-3">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest pl-1">Start</span>
               <Input
                 id="startDate"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                className="h-12 rounded-2xl border-border-light bg-bg-tertiary/30 px-4 font-bold shadow-inner"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
+            <div className="space-y-1">
+              <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest pl-1">End</span>
               <Input
                 id="endDate"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                className="h-12 rounded-2xl border-border-light bg-bg-tertiary/30 px-4 font-bold shadow-inner"
               />
             </div>
           </div>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2 mt-4">
-          <Button
-            onClick={handleApplyFilter}
-            disabled={!hasFilters}
-            className="w-full sm:w-auto"
-          >
-            Apply Filters
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleClearFilter}
-            className="w-full sm:w-auto"
-          >
-            Clear Filters
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      <div className="pt-4">
+        <Button
+          onClick={handleApplyFilter}
+          disabled={!hasFilters}
+          variant="default"
+          style={{ backgroundColor: '#085299', color: '#ffffff' }}
+          className="w-full h-14 rounded-2xl shadow-lg shadow-primary-500/20 font-black transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
+        >
+          <CheckCircle2 size={18} className="mr-2 stroke-[3px]" />
+          Synchronize View
+        </Button>
+      </div>
+    </div>
   );
 };
