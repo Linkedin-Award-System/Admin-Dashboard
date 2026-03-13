@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/design-system/components/Button';
+import { Badge } from '@/shared/design-system/components/Badge';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -55,93 +52,94 @@ export const VersionHistory = ({ onVersionSelect }: VersionHistoryProps) => {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-gray-500">Loading version history...</p>
-        </CardContent>
-      </Card>
+      <div className="p-6 bg-white rounded-lg border border-gray-200">
+        <p className="text-sm text-gray-500">Loading version history...</p>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-red-600">Failed to load version history</p>
-        </CardContent>
-      </Card>
+      <div className="p-6 bg-white rounded-lg border border-gray-200">
+        <p className="text-sm text-red-600">Failed to load version history</p>
+      </div>
     );
   }
 
   if (!versions || versions.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-gray-500">No version history available</p>
-        </CardContent>
-      </Card>
+      <div className="p-6 bg-white rounded-lg border border-gray-200">
+        <p className="text-sm text-gray-500">No version history available</p>
+      </div>
     );
   }
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Version History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {versions.map((version) => (
-              <div
-                key={version.id}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold text-gray-900">
-                        Version {version.version}
-                      </span>
-                      {version.isPublished && (
-                        <Badge variant="default">Published</Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>Created by: {version.createdBy}</p>
-                      <p>Date: {formatDate(version.createdAt)}</p>
-                    </div>
-                    <div className="mt-3 text-sm text-gray-700">
-                      <p className="font-medium">Content Summary:</p>
-                      <ul className="list-disc list-inside mt-1 space-y-1">
-                        <li>Hero: {version.content.hero.heading}</li>
-                        <li>Categories: {version.content.categories.heading}</li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onVersionSelect?.(version)}
-                    >
-                      View
-                    </Button>
-                    {!version.isPublished && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleRevertClick(version)}
-                        loading={revertContent.isPending}
-                      >
-                        Revert
-                      </Button>
-                    )}
-                  </div>
+      <div className="space-y-4">
+        {versions.map((version, index) => (
+          <div
+            key={version.id}
+            className="bg-white border border-gray-200 rounded-lg p-5 hover:border-gray-300 hover:shadow-sm transition-all duration-200"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-sm font-semibold text-gray-900">
+                    Version {version.version}
+                  </span>
+                  {version.isPublished && (
+                    <Badge variant="success" size="sm">Published</Badge>
+                  )}
+                  {index === 0 && !version.isPublished && (
+                    <Badge variant="info" size="sm">Latest</Badge>
+                  )}
+                </div>
+                <div className="text-xs text-gray-600 space-y-1 mb-3">
+                  <p><span className="font-medium">Created by:</span> {version.createdBy}</p>
+                  <p><span className="font-medium">Date:</span> {formatDate(version.createdAt)}</p>
+                </div>
+                <div className="text-xs text-gray-700">
+                  <p className="font-medium mb-2">Content Summary:</p>
+                  <ul className="space-y-1 pl-4">
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 mt-0.5">•</span>
+                      <span>Hero: {version.content.hero.heading}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 mt-0.5">•</span>
+                      <span>Roadmap: {version.content.timeline.heading}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 mt-0.5">•</span>
+                      <span>Partners: {version.content.sponsors.logos.length}</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
-            ))}
+              <div className="flex flex-col gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onVersionSelect?.(version)}
+                >
+                  View
+                </Button>
+                {!version.isPublished && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => handleRevertClick(version)}
+                    loading={revertContent.isPending}
+                  >
+                    Revert
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
 
       {/* Revert Confirmation Dialog */}
       <AlertDialog open={revertDialogOpen} onOpenChange={setRevertDialogOpen}>
@@ -155,15 +153,19 @@ export const VersionHistory = ({ onVersionSelect }: VersionHistoryProps) => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRevertDialogOpen(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => setRevertDialogOpen(false)}
+            >
               Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
+            </Button>
+            <Button
+              variant="danger"
               onClick={handleRevertConfirm}
               loading={revertContent.isPending}
             >
               Revert
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

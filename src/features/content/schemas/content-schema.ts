@@ -34,9 +34,28 @@ export const contentSchema = z.object({
       'About text contains invalid HTML'
     ),
   }),
-  categories: z.object({
-    heading: z.string().min(1, 'Categories heading is required').max(200, 'Categories heading must be at most 200 characters'),
-    description: z.string().min(1, 'Categories description is required').max(1000, 'Categories description must be at most 1000 characters'),
+  timeline: z.object({
+    heading: z.string().min(1, 'Timeline heading is required').max(200, 'Timeline heading must be at most 200 characters'),
+    events: z.array(z.object({
+      date: z.string().min(1, 'Event date is required'),
+      title: z.string().min(1, 'Event title is required'),
+      description: z.string().min(1, 'Event description is required'),
+    })).min(1, 'At least one event is required'),
+  }),
+  sponsors: z.object({
+    heading: z.string().min(1, 'Sponsors heading is required'),
+    logos: z.array(z.object({
+      name: z.string().min(1, 'Sponsor name is required'),
+      imageUrl: z.string().url('Must be a valid URL'),
+      url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+    })).min(1, 'At least one sponsor is required'),
+  }),
+  guide: z.object({
+    heading: z.string().min(1, 'Guide heading is required'),
+    sections: z.array(z.object({
+      title: z.string().min(1, 'Section title is required'),
+      content: z.string().min(1, 'Section content is required'),
+    })).min(1, 'At least one guide section is required'),
   }),
 });
 
