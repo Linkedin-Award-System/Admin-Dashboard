@@ -26,15 +26,28 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
     const grouped = new Map<string, { categoryName: string; nominees: Nominee[] }>();
 
     nominees.forEach((nominee) => {
-      nominee.categories.forEach((category) => {
-        if (!grouped.has(category.id)) {
-          grouped.set(category.id, { categoryName: category.name, nominees: [] });
+      if (!nominee.categories || nominee.categories.length === 0) {
+        // Nominees with no categories go into a single "Uncategorized" group
+        const key = '__uncategorized__';
+        if (!grouped.has(key)) {
+          grouped.set(key, { categoryName: 'Uncategorized', nominees: [] });
         }
-        grouped.get(category.id)!.nominees.push(nominee);
-      });
+        grouped.get(key)!.nominees.push(nominee);
+      } else {
+        nominee.categories.forEach((category) => {
+          // Group nominees with missing category names together under one "Unknown Category" bucket
+          const hasValidName = category.name && category.name.trim().length > 0;
+          const key = hasValidName ? (category.id ?? '__unknown__') : '__unknown__';
+          const displayName = hasValidName ? category.name : 'Unknown Category';
+          if (!grouped.has(key)) {
+            grouped.set(key, { categoryName: displayName, nominees: [] });
+          }
+          grouped.get(key)!.nominees.push(nominee);
+        });
+      }
     });
 
-    return new Map([...grouped.entries()].sort((a, b) => a[1].categoryName.localeCompare(b[1].categoryName)));
+    return new Map([...grouped.entries()].sort((a, b) => (a[1].categoryName ?? '').localeCompare(b[1].categoryName ?? '')));
   }, [nominees, categories]);
 
   if (isLoading) {
@@ -121,7 +134,7 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border-light to-transparent" />
               </div>
 
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {nominees.map((nominee: Nominee) => (
                   <Card
                     key={nominee.id}
@@ -189,24 +202,22 @@ export const NomineeList = ({ onEdit, onDelete, onCreate }: NomineeListProps) =>
                         
                         <div className="flex items-center gap-2">
                           {onEdit && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
+                            <button
                               onClick={() => onEdit(nominee)}
-                              className="h-10 w-10 rounded-xl transition-all group/edit shadow-sm"
+                              title="Edit nominee"
+                              className="h-10 w-10 rounded-xl flex items-center justify-center bg-gray-100 hover:bg-blue-100 hover:text-blue-600 text-gray-600 border border-gray-200 hover:border-blue-300 transition-all shadow-sm"
                             >
-                              <Pencil size={18} />
-                            </Button>
+                              <Pencil size={18} strokeWidth={2.5} />
+                            </button>
                           )}
                           {onDelete && (
-                            <Button
-                              variant="danger"
-                              size="sm"
+                            <button
                               onClick={() => onDelete(nominee)}
-                              className="h-10 w-10 rounded-xl transition-all group/delete shadow-sm"
+                              title="Delete nominee"
+                              className="h-10 w-10 rounded-xl flex items-center justify-center bg-red-500 hover:bg-red-600 text-white border border-red-500 hover:border-red-600 transition-all shadow-sm"
                             >
-                              <Trash2 size={18} />
-                            </Button>
+                              <Trash2 size={18} strokeWidth={2.5} />
+                            </button>
                           )}
                         </div>
                       </div>
