@@ -67,13 +67,20 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
 
   if (error) {
     return (
-      <div className="p-12 rounded-[2rem] border border-red-100 bg-red-50/50 backdrop-blur-sm text-center">
-        <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
-        <h3 className="text-xl font-bold text-red-800">Payment Data Unavailable</h3>
-        <p className="text-red-600 mt-2 max-w-md mx-auto">
+      <div className="p-16 rounded-[2.5rem] border-2 border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50/30 backdrop-blur-sm text-center shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+        <div className="inline-flex p-5 bg-red-100 rounded-3xl mb-6 shadow-lg">
+          <AlertCircle size={56} className="text-red-600" strokeWidth={2.5} />
+        </div>
+        <h3 className="text-2xl font-black text-red-900 tracking-tight">Payment Data Unavailable</h3>
+        <p className="text-red-700 font-medium mt-3 max-w-md mx-auto leading-relaxed">
           {error instanceof Error ? error.message : 'An error occurred while loading payment transactions'}
         </p>
-        <Button variant="outline" className="mt-6 border-red-200 text-red-700 hover:bg-red-100" onClick={() => window.location.reload()}>
+        <Button 
+          variant="outline" 
+          className="mt-8 border-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 font-bold px-8 py-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5" 
+          onClick={() => window.location.reload()}
+        >
+          <RotateCcw size={18} className="mr-2" />
           Try Again
         </Button>
       </div>
@@ -82,37 +89,44 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header with Total & Export */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-border-light shadow-premium">
-        <div>
-          <h2 className="text-3xl font-black text-text-primary tracking-tight flex items-center gap-3">
-            <span className="p-2.5 bg-green-50 rounded-2xl text-green-600">
-              <CreditCard size={28} />
+      {/* Enhanced Header with Total & Export */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-white via-blue-50/30 to-white p-8 rounded-[2.5rem] border-2 border-blue-100/50 shadow-xl hover:shadow-2xl transition-all duration-500">
+        <div className="space-y-2">
+          <h2 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
+            <span className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl text-white shadow-lg">
+              <CreditCard size={32} strokeWidth={2.5} />
             </span>
             Transactions
           </h2>
-          <p className="text-text-tertiary mt-1 font-medium italic">
-            Showing {sortedPayments.length} of {payments?.length || 0} recent transactions
-          </p>
+          <div className="flex items-center gap-3 ml-1">
+            <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+            <p className="text-gray-600 font-bold text-sm">
+              Showing <span className="text-green-600 font-black">{sortedPayments.length}</span> of <span className="font-black">{payments?.length || 0}</span> recent transactions
+            </p>
+          </div>
         </div>
         
         <ExportButton
           onExport={(format) => exportService.exportPayments(format, filters)}
           filename={`payments${filters?.status ? `-${filters.status}` : ''}`}
           label="Export Ledger"
-          className="rounded-2xl border-border-light hover:bg-bg-tertiary font-bold h-12 px-6"
+          className="rounded-2xl border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 font-bold h-14 px-8 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
         />
       </div>
 
       {sortedPayments.length === 0 ? (
-        <div className="py-20 text-center bg-white/50 backdrop-blur-md rounded-[2.5rem] border border-border-light border-dashed">
-          <div className="w-20 h-20 bg-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="text-text-tertiary" size={40} />
+        <div className="py-24 text-center bg-gradient-to-br from-white via-slate-50 to-white backdrop-blur-md rounded-[3rem] border-2 border-dashed border-gray-300 shadow-inner animate-in fade-in zoom-in-95 duration-500">
+          <div className="inline-flex p-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl shadow-lg mx-auto mb-6">
+            <FileText className="text-gray-500" size={48} strokeWidth={2} />
           </div>
-          <h3 className="text-xl font-bold text-text-primary">No Records Found</h3>
-          <p className="text-text-tertiary mt-2">
-            Adjust your filters or try a different date range.
+          <h3 className="text-2xl font-black text-gray-800 tracking-tight">No Records Found</h3>
+          <p className="text-gray-600 font-medium mt-3 max-w-sm mx-auto leading-relaxed">
+            Adjust your filters or try a different date range to view transactions.
           </p>
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="h-2 w-2 bg-gray-400 rounded-full animate-pulse" />
+            <span className="font-semibold">Awaiting filter criteria</span>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -123,20 +137,20 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
             return (
               <div 
                 key={payment.id} 
-                className="group relative bg-white p-6 rounded-[1.5rem] border border-border-light shadow-sm hover:shadow-premium hover:-translate-y-0.5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
-                style={{ animationDelay: `${index * 30}ms` }}
+                className="group relative bg-white/90 backdrop-blur-sm p-7 rounded-[2rem] border-2 border-gray-200/60 shadow-lg hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                style={{ animationDelay: `${index * 40}ms` }}
               >
                 <div className="flex flex-col xl:flex-row xl:items-center gap-6">
-                  {/* Status Indicator Area */}
+                  {/* Enhanced Status Indicator Area */}
                   <div className="flex items-center gap-4 xl:w-64 shrink-0">
                     <div className={cn(
-                      "h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner transition-transform group-hover:scale-110",
-                      payment.status === 'COMPLETED' ? "bg-green-50 text-green-600" :
-                      payment.status === 'PENDING' ? "bg-orange-50 text-orange-600" :
-                      payment.status === 'FAILED' ? "bg-red-50 text-red-600" :
-                      "bg-blue-50 text-blue-600"
+                      "h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
+                      payment.status === 'COMPLETED' ? "bg-gradient-to-br from-green-400 to-emerald-500 text-white" :
+                      payment.status === 'PENDING' ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white" :
+                      payment.status === 'FAILED' ? "bg-gradient-to-br from-red-400 to-rose-500 text-white" :
+                      "bg-gradient-to-br from-blue-400 to-indigo-500 text-white"
                     )}>
-                      <StatusIcon size={24} />
+                      <StatusIcon size={26} strokeWidth={2.5} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -180,20 +194,20 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
                     </div>
                   </div>
 
-                  {/* Amount / Action Area */}
-                  <div className="xl:w-48 text-right shrink-0 flex items-center justify-between xl:justify-end gap-6 border-t xl:border-t-0 pt-4 xl:pt-0">
-                    <div className="space-y-0.5">
-                      <div className="text-[10px] font-black text-text-tertiary uppercase tracking-wider">Amount</div>
-                      <div className="text-2xl font-black text-text-primary tracking-tight">
+                  {/* Enhanced Amount / Action Area */}
+                  <div className="xl:w-52 text-right shrink-0 flex items-center justify-between xl:justify-end gap-6 border-t-2 xl:border-t-0 xl:border-l-2 border-gray-200/60 pt-5 xl:pt-0 xl:pl-6">
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Amount</div>
+                      <div className="text-3xl font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">
                         {formatCurrency(payment.amount, payment.currency)}
                       </div>
                     </div>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="rounded-xl hover:bg-bg-tertiary text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="rounded-xl hover:bg-blue-50 hover:text-blue-600 text-gray-400 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 shadow-sm"
                     >
-                      <FileText size={18} />
+                      <FileText size={20} strokeWidth={2} />
                     </Button>
                   </div>
                 </div>
