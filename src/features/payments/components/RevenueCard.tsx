@@ -12,12 +12,14 @@ export const RevenueCard = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-5">
-        <div className="flex items-center gap-3 text-red-600 mb-2">
-          <Landmark className="h-5 w-5" />
-          <p className="font-semibold text-sm">Error Loading Revenue</p>
+      <div className="bg-gradient-to-br from-red-50 to-red-100/50 border-2 border-red-200 rounded-2xl p-6 shadow-lg">
+        <div className="flex items-center gap-3 text-red-700 mb-3">
+          <div className="p-2 bg-red-200/50 rounded-xl">
+            <Landmark className="h-5 w-5" />
+          </div>
+          <p className="font-bold text-sm">Error Loading Revenue</p>
         </div>
-        <p className="text-xs text-red-600">Unable to retrieve revenue data</p>
+        <p className="text-xs text-red-600 font-medium">Unable to retrieve revenue data. Please try again.</p>
       </div>
     );
   }
