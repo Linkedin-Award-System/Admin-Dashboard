@@ -69,77 +69,83 @@ export const PaymentFiltersForm = ({ onFilterChange }: PaymentFiltersProps) => {
   const hasFilters = status || (startDate && endDate);
 
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] border border-border-light shadow-soft space-y-8">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em] flex items-center gap-2">
-          <Filter size={14} /> Filter Intelligence
+    <div className="space-y-6">
+      <div className="flex items-center justify-between pb-4 border-b-2 border-gray-200">
+        <h3 className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-2">
+          <div className="p-1.5 bg-blue-100 rounded-lg">
+            <Filter size={14} className="text-blue-600" />
+          </div>
+          Filter Options
         </h3>
         {hasFilters && (
           <button 
             onClick={handleClearFilter}
-            className="text-[10px] font-black text-primary-600 hover:text-primary-700 underline underline-offset-4 flex items-center gap-1"
+            className="text-[10px] font-black text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 shadow-sm"
           >
-            <X size={10} /> Clear Specs
+            <X size={12} strokeWidth={3} /> Clear All
           </button>
         )}
       </div>
 
       <div className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="status" className="text-xs font-black text-text-secondary uppercase tracking-widest pl-1">Settlement Status</Label>
+        <div className="space-y-3">
+          <Label htmlFor="status" className="text-xs font-bold text-gray-700 uppercase tracking-wide pl-1 flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-green-600" />
+            Settlement Status
+          </Label>
           <select
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="flex h-12 w-full rounded-2xl border border-border-light bg-bg-tertiary/30 px-4 py-2 text-sm font-bold text-text-primary shadow-inner focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none appearance-none cursor-pointer"
+            className="flex h-12 w-full rounded-xl border-2 border-gray-300 bg-white hover:bg-gray-50 px-4 py-2 text-sm font-bold text-gray-800 shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 outline-none appearance-none cursor-pointer"
           >
             <option value="">All Transactions</option>
-            <option value="PENDING">Pending (Awaiting Sync)</option>
-            <option value="COMPLETED">Completed (Settled)</option>
-            <option value="FAILED">Failed (Voided)</option>
-            <option value="REFUNDED">Refunded</option>
+            <option value="PENDING">⏳ Pending (Awaiting Sync)</option>
+            <option value="COMPLETED">✓ Completed (Settled)</option>
+            <option value="FAILED">✗ Failed (Voided)</option>
+            <option value="REFUNDED">↩ Refunded</option>
           </select>
         </div>
         
         <div className="space-y-4">
-          <Label className="text-xs font-black text-text-secondary uppercase tracking-widest pl-1 flex items-center gap-2">
-            <Calendar size={14} className="text-text-tertiary" /> Temporal Range
+          <Label className="text-xs font-bold text-gray-700 uppercase tracking-wide pl-1 flex items-center gap-2">
+            <Calendar size={14} className="text-blue-600" /> Date Range
           </Label>
-          <div className="grid gap-3">
-            <div className="space-y-1">
-              <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest pl-1">Start</span>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide pl-1">Start Date</span>
               <Input
                 id="startDate"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="h-12 rounded-2xl border-border-light bg-bg-tertiary/30 px-4 font-bold shadow-inner"
+                className="h-12 rounded-xl border-2 border-gray-300 bg-white hover:bg-gray-50 px-4 font-bold shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
               />
             </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest pl-1">End</span>
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide pl-1">End Date</span>
               <Input
                 id="endDate"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="h-12 rounded-2xl border-border-light bg-bg-tertiary/30 px-4 font-bold shadow-inner"
+                className="h-12 rounded-xl border-2 border-gray-300 bg-white hover:bg-gray-50 px-4 font-bold shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
               />
             </div>
           </div>
         </div>
       </div>
       
-      <div className="pt-4">
+      <div className="pt-6">
         <Button
           onClick={handleApplyFilter}
           disabled={!hasFilters}
           variant="default"
-          style={{ backgroundColor: '#085299', color: '#ffffff' }}
-          className="w-full h-14 rounded-2xl shadow-lg shadow-primary-500/20 font-black transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
+          style={{ backgroundColor: '#0a66c2', color: '#ffffff' }}
+          className="w-full h-14 rounded-xl shadow-lg hover:shadow-xl font-black text-sm uppercase tracking-wide transition-all duration-300 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed"
         >
-          <CheckCircle2 size={18} className="mr-2 stroke-[3px]" />
-          Synchronize View
+          <CheckCircle2 size={20} className="mr-2 stroke-[3px]" />
+          Apply Filters
         </Button>
       </div>
     </div>
