@@ -58,17 +58,35 @@ Thumbs.db
 .temp
 .tmp
 
-# Temporary documentation files
+# Temporary documentation files (auto-generated, not for version control)
 TASK_*.md
 TEST_*.md
 DEBUG_*.md
-*_FIX_*.md
+*_FIX*.md
 *_COMPLETE*.md
 *_SUMMARY*.md
 *_STATUS*.md
 *_ISSUE*.md
 *_VERIFICATION*.md
 *_CHANGES*.md
+*_APPLIED*.md
+*_CORRECTED*.md
+*_DIAGNOSTIC*.md
+*_REQUIRED*.md
+*_FIXED*.md
+*_GUIDE*.md
 START_*.md
 WORK_*.md
+QUICK_*.md
+HOW_TO_*.md
+UI_*.md
+API_*.md
+BACKEND_*.md
+CONSOLE_*.md
+IMPLEMENTATION_*.md
+DASHBOARD_*.md
+ANALYTICS_*.md
+ACCESSIBILITY_*.md
+LOGIN_*.md
+SETUP.md
 test-api-integration.md
