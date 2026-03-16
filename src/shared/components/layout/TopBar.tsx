@@ -95,17 +95,19 @@ export function TopBar({ onMenuClick }: TopBarProps) {
             </button>
             <ProfileDropdown 
               isOpen={showProfile} 
-              onClose={() => setShowProfile(false)} 
+              onClose={() => setShowProfile(false)}
+              onOpenSettings={() => { setShowProfile(false); setShowSettings(true); }}
             />
           </div>
         </div>
       </div>
 
-      {/* Settings Modal */}
-      <SettingsModal 
-        isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
-      />
     </header>
+
+      {/* Settings Modal — rendered outside header to avoid clipping */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
   );
 }
