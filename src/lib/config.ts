@@ -26,7 +26,6 @@ interface AppConfig {
  * Get environment variable with fallback
  */
 function getEnvVar(key: string, defaultValue: string): string {
-  console.log(`[CONFIG DEBUG] Getting ${key}:`, import.meta.env[key], 'All env vars:', import.meta.env);
   return import.meta.env[key] || defaultValue;
 }
 
