@@ -70,13 +70,13 @@ export const CategoryVoteStats = ({ dateRange }: CategoryVoteStatsProps) => {
                   <Trophy size={16} style={{ color: chartColorPalette.complementary[3] }} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest">Front Runner</p>
-                  <p className="text-sm font-black text-text-primary truncate max-w-[150px]">{stat.leadingNominee.name}</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Front Runner</p>
+                  <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{stat.leadingNominee.name}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-black tracking-tight" style={{ color: chartColorPalette.primary }}>{stat.leadingNominee.voteCount}</p>
-                <p className="text-[10px] font-bold text-text-tertiary">Verified Votes</p>
+                <p className="text-lg font-semibold tracking-tight" style={{ color: chartColorPalette.primary }}>{stat.leadingNominee.voteCount}</p>
+                <p className="text-xs font-normal text-gray-400">Verified Votes</p>
               </div>
             </div>
 
@@ -89,7 +89,7 @@ export const CategoryVoteStats = ({ dateRange }: CategoryVoteStatsProps) => {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={cn(
-                          "w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black transition-colors",
+                          "w-5 h-5 rounded-md flex items-center justify-center text-xs font-semibold transition-colors",
                           isLeading ? "text-white" : "bg-bg-tertiary text-text-tertiary"
                         )}
                         style={isLeading ? { backgroundColor: chartColorPalette.primary } : {}}
@@ -97,14 +97,14 @@ export const CategoryVoteStats = ({ dateRange }: CategoryVoteStatsProps) => {
                           {idx + 1}
                         </span>
                         <p className={cn(
-                          "text-sm font-bold transition-colors",
-                          isLeading ? "text-text-primary" : "text-text-secondary"
+                          "text-sm font-medium transition-colors",
+                          isLeading ? "text-gray-900" : "text-text-secondary"
                         )}>
                           {nominee.nomineeName}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-text-primary">{nominee.percentage.toFixed(1)}%</span>
+                      <span className="text-xs font-semibold text-text-primary">{nominee.percentage.toFixed(1)}%</span>
                         <TrendingUp size={12} style={{ color: isLeading ? chartColorPalette.status.success : '#d1d5db' }} />
                       </div>
                     </div>
@@ -128,8 +128,8 @@ export const CategoryVoteStats = ({ dateRange }: CategoryVoteStatsProps) => {
                     </div>
                     
                     <div className="flex justify-between mt-1.5 px-0.5">
-                      <p className="text-[9px] font-bold text-text-tertiary/60 lowercase tracking-tight">#{nominee.nomineeId.slice(-6)}</p>
-                      <p className="text-[9px] font-black text-text-tertiary">{formatNumber(nominee.voteCount)} votes</p>
+                      <p className="text-xs font-normal text-gray-400 lowercase tracking-tight">#{nominee.nomineeId.slice(-6)}</p>
+                      <p className="text-xs font-medium text-gray-500">{formatNumber(nominee.voteCount)} votes</p>
                     </div>
                   </div>
                 );

@@ -168,7 +168,7 @@ export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
             {subtitle && (
               <p 
                 className={cn(
-                  'mt-2 text-sm text-gray-500', // 14px regular, #6b7280, 8px top margin (Requirement 5.2, 5.5)
+                  'mt-2 text-sm font-normal text-gray-500', // 14px regular, #6b7280, 8px top margin (Requirement 5.2, 5.5)
                 )}
               >
                 {subtitle}

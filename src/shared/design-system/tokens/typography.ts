@@ -152,15 +152,15 @@ export const typography = {
  * For use with className prop
  */
 export const typographyClasses = {
-  pageTitle: 'text-2xl font-semibold leading-tight',
-  sectionHeader: 'text-base font-medium uppercase tracking-wider',
-  cardTitle: 'text-lg font-medium',
-  body: 'text-sm leading-normal',
+  pageTitle: 'text-2xl font-semibold',
+  sectionHeader: 'text-sm font-semibold uppercase tracking-wider',
+  cardTitle: 'text-base font-semibold',
+  body: 'text-sm font-normal',
   tableHeader: 'text-xs font-medium uppercase tracking-wider',
-  metricValue: 'text-3xl font-semibold leading-tight',
+  metricValue: 'text-3xl font-semibold',
   metricLabel: 'text-xs font-medium uppercase tracking-wider',
   button: 'text-sm font-medium',
   input: 'text-sm',
   label: 'text-sm font-medium',
-  caption: 'text-xs',
+  caption: 'text-xs font-normal',
 } as const;

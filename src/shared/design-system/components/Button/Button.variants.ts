@@ -89,7 +89,7 @@ export const buttonVariants = cva(
         sm: 'h-9 px-4 text-sm',
         
         // Medium: 12px vertical, 24px horizontal padding (default)
-        md: 'h-12 px-6 py-3',
+        md: 'h-12 px-6 py-3 text-sm',
         
         // Large: 14px height, 32px horizontal padding
         lg: 'h-14 px-8 text-lg',

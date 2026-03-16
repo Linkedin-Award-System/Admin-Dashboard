@@ -43,10 +43,10 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center bg-white/50 backdrop-blur-md p-6 rounded-3xl border border-border-light shadow-sm">
-          <h2 className="text-3xl font-bold text-text-primary tracking-tight">Categories</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Categories</h2>
         </div>
         <div className="p-8 rounded-3xl border border-red-100 bg-red-50/50 backdrop-blur-sm text-center">
-          <h3 className="text-xl font-bold text-red-800">Error Loading Categories</h3>
+          <h3 className="text-xl font-semibold text-red-800">Error Loading Categories</h3>
           <p className="text-red-600 mt-2 max-w-md mx-auto">
             {error instanceof Error ? error.message : 'An error occurred while loading categories'}
           </p>
@@ -73,7 +73,7 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
               className="rounded-2xl border-border-light hover:bg-bg-tertiary font-semibold"
             />
             {onCreate && (
-              <Button onClick={onCreate} variant="primary" style={{ backgroundColor: '#085299', color: '#ffffff' }} className="rounded-2xl shadow-lg shadow-primary-500/20 px-6 h-12 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
+              <Button onClick={onCreate} variant="primary" style={{ backgroundColor: '#085299', color: '#ffffff' }} className="rounded-2xl shadow-lg shadow-primary-500/20 px-6 h-12 font-medium transition-all hover:scale-[1.02] active:scale-[0.98]">
                 <Plus className="mr-2 h-5 w-5 stroke-[3px]" />
                 New Category
               </Button>
@@ -105,14 +105,14 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
           <div className="w-20 h-20 bg-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
             <FolderOpen className="text-text-tertiary" size={40} />
           </div>
-          <h3 className="text-xl font-bold text-text-primary">No Categories Found</h3>
+          <h3 className="text-xl font-semibold text-gray-900">No Categories Found</h3>
           <p className="text-text-tertiary mt-2">
             {searchTerm
               ? `No categories match "${searchTerm}"`
               : 'Start building your dashboard by adding your first category.'}
           </p>
           {searchTerm && (
-            <Button variant="ghost" onClick={() => setSearchTerm('')} className="mt-2 text-primary-600 font-bold underline-offset-4">
+            <Button variant="ghost" onClick={() => setSearchTerm('')} className="mt-2 text-primary-600 font-medium underline-offset-4">
               Clear search filter
             </Button>
           )}
@@ -128,17 +128,17 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
             >
               {/* Category Icon/Initial */}
               <div className="flex items-start justify-between mb-6">
-                <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 font-black text-2xl shadow-inner group-hover:scale-110 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
+                <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 font-semibold text-2xl shadow-inner group-hover:scale-110 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
                   {category.name.charAt(0)}
                 </div>
-                <Badge variant="secondary" className="bg-bg-tertiary/50 text-text-secondary font-bold px-3 py-1 rounded-full border-none ring-1 ring-inset ring-black/5 group-hover:bg-primary-50 group-hover:text-primary-700 transition-colors">
+                <Badge variant="secondary" className="bg-bg-tertiary/50 text-text-secondary font-medium px-3 py-1 rounded-full border-none ring-1 ring-inset ring-black/5 group-hover:bg-primary-50 group-hover:text-primary-700 transition-colors">
                   {category.nomineeCount} Nominees
                 </Badge>
               </div>
 
               {/* Title & Description */}
               <div className="space-y-2 mb-8">
-                <h3 className="text-lg font-medium text-text-primary group-hover:text-primary-600 transition-colors">
+                <h3 className="text-base font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
                   {category.name}
                 </h3>
                 <p className="text-sm text-text-tertiary line-clamp-3 leading-relaxed">

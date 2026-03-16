@@ -88,10 +88,10 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
               <span className={`p-4 ${item.bg} ${item.color} rounded-2xl group-hover:scale-110 transition-transform`}>
                 <item.icon size={24} />
               </span>
-              <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest">{item.trend}</span>
+              <span className="text-xs font-medium text-gray-400">{item.trend}</span>
             </div>
-            <h3 className="text-sm font-bold text-text-tertiary mb-1">{item.label}</h3>
-            <div className="text-4xl font-black text-text-primary tracking-tight">{item.value}</div>
+            <h3 className="text-sm font-medium text-gray-500 mb-1">{item.label}</h3>
+            <div className="text-3xl font-semibold text-gray-900">{item.value}</div>
           </div>
         ))}
       </div>
@@ -100,18 +100,18 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
       <div className="bg-white rounded-[2.5rem] border border-border-light shadow-premium overflow-hidden">
         <div className="p-8 border-b border-border-light flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <h3 className="text-2xl font-black text-text-primary tracking-tight flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-3">
               <Trophy className="text-yellow-500" size={28} />
               Leading Nominees
             </h3>
-            <p className="text-text-tertiary font-medium mt-1 italic">Real-time category front-runners</p>
+            <p className="text-sm font-normal text-gray-500 mt-1">Real-time category front-runners</p>
           </div>
           
           <ExportButton
             onExport={(format) => exportService.exportVoteStats(format, dateRange)}
             filename={`vote-stats${dateRange ? `-${dateRange.startDate}` : ''}`}
             label="Download Full Audit"
-            className="rounded-xl h-11 px-6 border-border-light hover:bg-bg-tertiary font-bold transition-all"
+            className="rounded-xl h-11 px-6 border-border-light hover:bg-bg-tertiary transition-all"
           />
         </div>
 
@@ -135,18 +135,18 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
                       {index + 1}
                     </div>
                     <div>
-                      <p className="text-xs font-black text-text-tertiary uppercase tracking-widest">{stat.categoryName}</p>
-                      <h4 className="text-lg font-black text-text-primary mt-0.5 group-hover:translate-x-1 transition-transform">{stat.leadingNominee.name}</h4>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{stat.categoryName}</p>
+                      <h4 className="text-lg font-semibold text-gray-900 mt-0.5 group-hover:translate-x-1 transition-transform">{stat.leadingNominee.name}</h4>
                     </div>
                   </div>
                   
                   <div className="mt-4 sm:mt-0 flex items-center gap-6">
                     <div className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-xl font-black text-primary-600 tracking-tight">{formatNumber(stat.leadingNominee.voteCount)}</span>
+                        <span className="text-xl font-semibold text-primary-600">{formatNumber(stat.leadingNominee.voteCount)}</span>
                         <TrendingUp size={16} className="text-green-500" />
                       </div>
-                      <p className="text-[10px] font-black text-text-tertiary uppercase tracking-tighter mt-0.5">Verified Votes</p>
+                      <p className="text-xs font-normal text-gray-400 mt-0.5">Verified Votes</p>
                     </div>
                     <ChevronRight className="text-text-tertiary group-hover:text-primary-600 group-hover:translate-x-1 transition-all" size={20} />
                   </div>

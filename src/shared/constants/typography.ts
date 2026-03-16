@@ -7,10 +7,10 @@
 
 export const typography = {
   // Headings
-  heading1: 'text-3xl font-bold tracking-tight',
-  heading2: 'text-2xl font-semibold tracking-tight',
-  heading3: 'text-xl font-semibold',
-  heading4: 'text-lg font-semibold',
+  heading1: 'text-2xl font-semibold',
+  heading2: 'text-2xl font-semibold',
+  heading3: 'text-lg font-semibold',
+  heading4: 'text-base font-semibold',
   
   // Body text
   body: 'text-base',
@@ -22,9 +22,9 @@ export const typography = {
   label: 'text-sm font-medium',
   
   // Metric displays
-  metricValue: 'text-4xl font-bold tracking-tight',
-  metricValueLarge: 'text-5xl font-bold tracking-tight',
-  metricLabel: 'text-sm text-gray-600 font-medium',
+  metricValue: 'text-3xl font-semibold',
+  metricValueLarge: 'text-3xl font-semibold',
+  metricLabel: 'text-xs font-medium uppercase tracking-wider',
   
   // Chart labels
   chartTitle: 'text-lg font-semibold',

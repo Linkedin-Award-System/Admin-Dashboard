@@ -71,13 +71,13 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
         <div className="inline-flex p-5 bg-red-100 rounded-3xl mb-6 shadow-lg">
           <AlertCircle size={56} className="text-red-600" strokeWidth={2.5} />
         </div>
-        <h3 className="text-2xl font-black text-red-900 tracking-tight">Payment Data Unavailable</h3>
+        <h3 className="text-xl font-semibold text-red-800">Payment Data Unavailable</h3>
         <p className="text-red-700 font-medium mt-3 max-w-md mx-auto leading-relaxed">
           {error instanceof Error ? error.message : 'An error occurred while loading payment transactions'}
         </p>
         <Button 
           variant="outline" 
-          className="mt-8 border-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 font-bold px-8 py-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5" 
+          className="mt-8 border-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 px-8 py-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5" 
           onClick={() => window.location.reload()}
         >
           <RotateCcw size={18} className="mr-2" />
@@ -92,7 +92,7 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
       {/* Enhanced Header with Total & Export */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-white via-blue-50/30 to-white p-8 rounded-[2.5rem] border-2 border-blue-100/50 shadow-xl hover:shadow-2xl transition-all duration-500">
         <div className="space-y-2">
-          <h2 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
+          <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-4">
             <span className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl text-white shadow-lg">
               <CreditCard size={32} strokeWidth={2.5} />
             </span>
@@ -100,8 +100,8 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
           </h2>
           <div className="flex items-center gap-3 ml-1">
             <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-            <p className="text-gray-600 font-bold text-sm">
-              Showing <span className="text-green-600 font-black">{sortedPayments.length}</span> of <span className="font-black">{payments?.length || 0}</span> recent transactions
+            <p className="text-sm font-normal text-gray-500">
+              Showing <span className="text-green-600 font-semibold">{sortedPayments.length}</span> of <span className="font-semibold">{payments?.length || 0}</span> recent transactions
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
           onExport={(format) => exportService.exportPayments(format, filters)}
           filename={`payments${filters?.status ? `-${filters.status}` : ''}`}
           label="Export Ledger"
-          className="rounded-2xl border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 font-bold h-14 px-8 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+          className="rounded-2xl border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 h-14 px-8 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
         />
       </div>
 
@@ -119,7 +119,7 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
           <div className="inline-flex p-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl shadow-lg mx-auto mb-6">
             <FileText className="text-gray-500" size={48} strokeWidth={2} />
           </div>
-          <h3 className="text-2xl font-black text-gray-800 tracking-tight">No Records Found</h3>
+          <h3 className="text-xl font-semibold text-gray-800">No Records Found</h3>
           <p className="text-gray-600 font-medium mt-3 max-w-sm mx-auto leading-relaxed">
             Adjust your filters or try a different date range to view transactions.
           </p>
@@ -157,7 +157,7 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
                         <StatusBadge status={status.status} size="sm" />
                         {payment.status === 'COMPLETED' && <CheckCircle2 size={14} className="text-green-500" />}
                       </div>
-                      <div className="flex items-center gap-1.5 text-text-tertiary text-xs font-bold mt-1.5">
+                      <div className="flex items-center gap-1.5 text-gray-400 text-xs font-normal mt-1.5">
                         <Clock size={12} />
                         {formatDatePremium(payment.createdAt)}
                       </div>
@@ -167,28 +167,28 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
                   {/* Transaction ID & Meta */}
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-black text-text-tertiary uppercase tracking-wider flex items-center gap-1.5">
+                      <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                         <Hash size={10} /> Reference ID
                       </Label>
-                      <p className="text-sm font-mono font-bold text-text-secondary select-all truncate">
+                      <p className="text-sm font-mono font-medium text-gray-700 select-all truncate">
                         {payment.txRef}
                       </p>
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-black text-text-tertiary uppercase tracking-wider flex items-center gap-1.5">
+                      <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                         <Building2 size={10} /> Allocation
                       </Label>
-                      <p className="text-sm font-bold text-text-secondary">
+                      <p className="text-sm font-medium text-gray-700">
                         Package ID: {payment.packageId}
                       </p>
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-black text-text-tertiary uppercase tracking-wider flex items-center gap-1.5">
+                      <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                         <Calendar size={10} /> Settlement
                       </Label>
-                      <p className="text-sm font-bold text-text-secondary">
+                      <p className="text-sm font-medium text-gray-700">
                         {payment.completedAt ? formatDatePremium(payment.completedAt) : '--'}
                       </p>
                     </div>
@@ -197,8 +197,8 @@ export const PaymentList = ({ filters }: PaymentListProps) => {
                   {/* Enhanced Amount / Action Area */}
                   <div className="xl:w-52 text-right shrink-0 flex items-center justify-between xl:justify-end gap-6 border-t-2 xl:border-t-0 xl:border-l-2 border-gray-200/60 pt-5 xl:pt-0 xl:pl-6">
                     <div className="space-y-1">
-                      <div className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Amount</div>
-                      <div className="text-3xl font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</div>
+                      <div className="text-2xl font-semibold text-gray-900">
                         {formatCurrency(payment.amount, payment.currency)}
                       </div>
                     </div>
