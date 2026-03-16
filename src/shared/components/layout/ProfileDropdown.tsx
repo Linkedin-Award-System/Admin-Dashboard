@@ -6,9 +6,10 @@ import { useNavigate } from 'react-router-dom';
 interface ProfileDropdownProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenSettings: () => void;
 }
 
-export function ProfileDropdown({ isOpen, onClose }: ProfileDropdownProps) {
+export function ProfileDropdown({ isOpen, onClose, onOpenSettings }: ProfileDropdownProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -35,12 +36,22 @@ export function ProfileDropdown({ isOpen, onClose }: ProfileDropdownProps) {
     onClose();
   };
 
+  const handleOpenSettings = () => {
+    onClose();
+    onOpenSettings();
+  };
+
+  const handleHelpSupport = () => {
+    window.open('mailto:support@awards.com', '_blank');
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const menuItems = [
-    { icon: User, label: 'My Profile', action: () => console.log('Profile clicked') },
-    { icon: Settings, label: 'Account Settings', action: () => console.log('Settings clicked') },
-    { icon: HelpCircle, label: 'Help & Support', action: () => console.log('Help clicked') },
+    { icon: User, label: 'My Profile', action: handleOpenSettings },
+    { icon: Settings, label: 'Account Settings', action: handleOpenSettings },
+    { icon: HelpCircle, label: 'Help & Support', action: handleHelpSupport },
   ];
 
   return (
@@ -72,10 +83,7 @@ export function ProfileDropdown({ isOpen, onClose }: ProfileDropdownProps) {
           return (
             <button
               key={index}
-              onClick={() => {
-                item.action();
-                onClose();
-              }}
+              onClick={() => item.action()}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-bg-tertiary transition-colors text-left"
             >
               <Icon size={18} className="text-text-tertiary" />
