@@ -26,7 +26,7 @@ const navItems: NavItem[] = [
   { name: 'Nominees', path: '/nominees', icon: Users },
   { name: 'Voting Hub', path: '/voting', icon: Activity },
   { name: 'Financials', path: '/payments', icon: Landmark },
-  { name: 'Web Presence', path: '/content', icon: Globe },
+  { name: 'Content Management', path: '/content', icon: Globe },
 ];
 
 interface SidebarProps {
