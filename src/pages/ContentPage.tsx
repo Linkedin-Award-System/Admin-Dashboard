@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Layout } from '@/shared/components/layout';
 import {
   ContentEditor,
@@ -23,7 +23,8 @@ import { Button } from '@/shared/design-system/components/Button';
 import { PageHeader } from '@/shared/design-system/patterns/PageHeader';
 
 export const ContentPage = () => {
-  const { data: currentContent, isLoading } = useCurrentContent();
+  const { data: currentContent, isLoading, error, refetch } = useCurrentContent();
+  const submitRef = useRef<HTMLButtonElement>(null);
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'timeline' | 'sponsors' | 'guide'>('hero');
   const [showPreview, setShowPreview] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -36,6 +37,24 @@ export const ContentPage = () => {
           <div className="animate-pulse space-y-4">
             <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto" />
             <div className="h-4 w-48 bg-gray-200 rounded mx-auto" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+          <div className="space-y-4">
+            <p className="text-red-600 font-semibold">Failed to load content. Please try again.</p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </Layout>
@@ -110,6 +129,7 @@ export const ContentPage = () => {
                 variant="primary"
                 icon={<Save size={18} />}
                 style={{ backgroundColor: '#085299', color: '#ffffff' }}
+                onClick={() => submitRef.current?.click()}
               >
                 Save
               </Button>
@@ -157,6 +177,7 @@ export const ContentPage = () => {
                 <ContentEditor
                   initialData={currentContent?.content}
                   activeSection={activeSection}
+                  submitRef={submitRef}
                 />
               </div>
             </div>
