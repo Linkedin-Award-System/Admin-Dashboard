@@ -66,7 +66,9 @@ export const VersionHistory = ({ onVersionSelect }: VersionHistoryProps) => {
     );
   }
 
-  if (!versions || versions.length === 0) {
+  const versionList = Array.isArray(versions) ? versions : [];
+
+  if (versionList.length === 0) {
     return (
       <div className="p-6 bg-white rounded-lg border border-gray-200">
         <p className="text-sm text-gray-500">No version history available</p>
@@ -77,7 +79,7 @@ export const VersionHistory = ({ onVersionSelect }: VersionHistoryProps) => {
   return (
     <>
       <div className="space-y-4">
-        {versions.map((version, index) => (
+        {versionList.map((version, index) => (
           <div
             key={version.id}
             className="bg-white border border-gray-200 rounded-lg p-5 hover:border-gray-300 hover:shadow-sm transition-all duration-200"
