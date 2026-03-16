@@ -16,6 +16,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   const [showProfile, setShowProfile] = useState(false);
 
   return (
+    <>
     <header className="sticky top-0 z-30 h-24 bg-bg-secondary/60 backdrop-blur-xl border-b border-white/40 px-4 sm:px-6 lg:px-8 shadow-soft">
       <div className="flex items-center justify-between h-full max-w-7xl mx-auto">
         {/* Left Section: Menu Toggle & Search */}
@@ -109,5 +110,6 @@ export function TopBar({ onMenuClick }: TopBarProps) {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
       />
+    </>
   );
 }
