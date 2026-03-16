@@ -3,6 +3,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { uploadService } from '@/features/uploads/services/upload-service';
 
 interface ImageManagerProps {
   onImageSelect?: (imageUrl: string) => void;
@@ -19,6 +20,7 @@ export const ImageManager = ({ onImageSelect }: ImageManagerProps) => {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [imageUrl, setImageUrl] = useState('');
   const [urlError, setUrlError] = useState('');
+  const [uploadError, setUploadError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,29 +71,33 @@ export const ImageManager = ({ onImageSelect }: ImageManagerProps) => {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    setUploadError('');
     
-    // Simulate file upload (in real app, this would upload to a server)
     const file = files[0];
     
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      setUploadError('Please select an image file');
       setIsUploading(false);
       return;
     }
 
-    // Create a local URL for the image
-    const localUrl = URL.createObjectURL(file);
-    
-    const newImage: UploadedImage = {
-      id: Date.now().toString(),
-      url: localUrl,
-      name: file.name,
-      uploadedAt: new Date().toISOString(),
-    };
+    try {
+      const response = await uploadService.uploadImage(file, 'GENERAL');
+      
+      const newImage: UploadedImage = {
+        id: Date.now().toString(),
+        url: response.url,
+        name: file.name,
+        uploadedAt: new Date().toISOString(),
+      };
 
-    setImages([newImage, ...images]);
-    setIsUploading(false);
+      setImages((prev) => [newImage, ...prev]);
+    } catch {
+      setUploadError('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -177,6 +183,9 @@ export const ImageManager = ({ onImageSelect }: ImageManagerProps) => {
             </div>
             {urlError && (
               <p className="text-sm text-red-600">{urlError}</p>
+            )}
+            {uploadError && (
+              <p className="text-sm text-red-600">{uploadError}</p>
             )}
           </div>
         </CardContent>

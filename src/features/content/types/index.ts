@@ -10,9 +10,28 @@ export interface LandingContent {
     about: {
       text: string;
     };
-    categories: {
+    timeline: {
       heading: string;
-      description: string;
+      events: {
+        date: string;
+        title: string;
+        description: string;
+      }[];
+    };
+    sponsors: {
+      heading: string;
+      logos: {
+        name: string;
+        imageUrl: string;
+        url?: string;
+      }[];
+    };
+    guide: {
+      heading: string;
+      sections: {
+        title: string;
+        content: string;
+      }[];
     };
   };
   isPublished: boolean;
@@ -29,8 +48,27 @@ export interface ContentFormData {
   about: {
     text: string;
   };
-  categories: {
+  timeline: {
     heading: string;
-    description: string;
+    events: {
+      date: string;
+      title: string;
+      description: string;
+    }[];
+  };
+  sponsors: {
+    heading: string;
+    logos: {
+      name: string;
+      imageUrl: string;
+      url?: string;
+    }[];
+  };
+  guide: {
+    heading: string;
+    sections: {
+      title: string;
+      content: string;
+    }[];
   };
 }

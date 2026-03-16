@@ -1,9 +1,63 @@
-@import "tailwindcss";
+/**
+ * Main CSS Entry Point
+ * Imports the comprehensive design system globals
+ */
+@import "./shared/design-system/globals.css";
 
-@layer base {
-  :root {
-    --color-background: 0 0% 100%;
-    --color-foreground: 222.2 84% 4.9%;
-    --color-muted-foreground: 215.4 16.3% 46.9%;
-  }
+/* Component Styles */
+.glass-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-premium);
+}
+
+.premium-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 2rem; /* More rounded for premium feel */
+  box-shadow: var(--shadow-soft);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.premium-card:hover {
+  box-shadow: var(--shadow-premium);
+  transform: translateY(-4px) scale(1.005);
+  border-color: rgba(10, 102, 194, 0.2);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-500) 50%, var(--primary-400) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+}
+
+.nav-item-active {
+  background: linear-gradient(90deg, var(--primary-50) 0%, rgba(232, 240, 254, 0) 100%);
+  color: var(--primary-600);
+  border-right: 3px solid var(--primary-600);
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-primary) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite ease-in-out;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }

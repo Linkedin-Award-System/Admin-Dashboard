@@ -1,41 +1,56 @@
-import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { Skeleton } from '@/shared/design-system/components/Skeleton/Skeleton';
 
 export const NomineeListSkeleton = () => {
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-10 w-36" />
+    <div className="space-y-8">
+      {/* Header Skeleton */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-border-light shadow-soft">
+        <div className="flex items-center gap-3">
+          <Skeleton variant="rectangular" width="56px" height="56px" className="rounded-2xl" />
+          <div className="space-y-2">
+            <Skeleton variant="text" width="160px" height="32px" />
+            <Skeleton variant="text" width="256px" height="16px" />
+          </div>
+        </div>
+        <Skeleton variant="rectangular" width="160px" height="48px" className="rounded-2xl" />
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-10 w-48" />
+      {/* Filter Bar Skeleton */}
+      <div className="flex items-center gap-4 bg-bg-tertiary/30 p-4 rounded-[1.5rem] border border-border-light">
+        <Skeleton variant="text" width="128px" height="24px" className="ml-2" />
+        <Skeleton variant="rectangular" width="256px" height="44px" className="rounded-xl" />
       </div>
 
-      <div className="space-y-6">
-        {[1, 2].map((categoryIndex) => (
-          <div key={categoryIndex}>
-            <Skeleton className="h-7 w-40 mb-3" />
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Grid Sections Skeleton */}
+      <div className="space-y-12">
+        {[1, 2].map((section) => (
+          <div key={section} className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-border-light/50" />
+              <Skeleton variant="text" width="192px" height="24px" className="rounded-lg" />
+              <div className="h-px flex-1 bg-border-light/50" />
+            </div>
+
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="w-full h-48 rounded-md mb-2" />
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2 mt-2" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-5/6 mb-3" />
-                    <Skeleton className="h-4 w-2/3 mb-4" />
-                    <div className="flex justify-end space-x-2">
-                      <Skeleton className="h-9 w-9" />
-                      <Skeleton className="h-9 w-9" />
+                <div key={i} className="bg-white rounded-[2rem] border border-border-light shadow-soft overflow-hidden">
+                  <Skeleton variant="rectangular" width="100%" height="224px" />
+                  <div className="p-7 space-y-6">
+                    <div className="space-y-2">
+                      <Skeleton variant="text" width="75%" height="24px" className="rounded-lg" />
+                      <Skeleton variant="text" width="33%" height="20px" className="rounded-lg" />
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="space-y-2">
+                      <Skeleton variant="text" width="100%" height="16px" className="rounded-lg" />
+                      <Skeleton variant="text" width="83%" height="16px" className="rounded-lg" />
+                    </div>
+                    <div className="flex items-center gap-3 pt-6 border-t border-border-light/50">
+                      <Skeleton variant="rectangular" height="40px" className="flex-1 rounded-xl" />
+                      <Skeleton variant="rectangular" width="40px" height="40px" className="rounded-xl" />
+                      <Skeleton variant="rectangular" width="40px" height="40px" className="rounded-xl" />
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>

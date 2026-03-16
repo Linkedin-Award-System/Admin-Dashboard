@@ -60,7 +60,7 @@ export const DeleteNomineeDialog = ({
             ) : (
               <>
                 Are you sure you want to delete the nominee{' '}
-                <strong>"{nominee.name}"</strong>? This action cannot be undone.
+                <strong>"{nominee.fullName}"</strong>? This action cannot be undone.
               </>
             )}
           </AlertDialogDescription>

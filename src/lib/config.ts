@@ -26,6 +26,7 @@ interface AppConfig {
  * Get environment variable with fallback
  */
 function getEnvVar(key: string, defaultValue: string): string {
+  console.log(`[CONFIG DEBUG] Getting ${key}:`, import.meta.env[key], 'All env vars:', import.meta.env);
   return import.meta.env[key] || defaultValue;
 }
 
@@ -52,7 +53,7 @@ export const config: AppConfig = {
   env: getEnvVar('VITE_APP_ENV', 'development') as AppConfig['env'],
   
   api: {
-    baseUrl: getEnvVar('VITE_API_BASE_URL', 'http://localhost:3000/api'),
+    baseUrl: getEnvVar('VITE_API_BASE_URL', 'http://localhost:4000/api'),
     timeout: getEnvNumber('VITE_API_TIMEOUT', 30000),
     maxRetries: getEnvNumber('VITE_API_MAX_RETRIES', 3),
   },

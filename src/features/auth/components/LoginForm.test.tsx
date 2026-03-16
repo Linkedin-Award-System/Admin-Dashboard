@@ -136,11 +136,12 @@ describe('LoginForm', () => {
     await user.type(emailInput, 'admin@example.com');
     await user.type(passwordInput, 'password123');
 
+    // Grab button reference before clicking (name changes to "Signing in..." during submission)
     const submitButton = screen.getByRole('button', { name: /sign in/i });
     await user.click(submitButton);
 
+    // Button is disabled and shows "Signing in..." spinner during submission
     expect(submitButton).toBeDisabled();
-    // Button shows spinner but keeps "Sign In" text
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /signing in/i })).toBeInTheDocument();
   });
 });

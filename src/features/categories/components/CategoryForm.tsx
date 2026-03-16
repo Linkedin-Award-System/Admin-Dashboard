@@ -4,8 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { categorySchema, type CategorySchemaType } from '../schemas/category-schema';
 import { useCreateCategory, useUpdateCategory } from '../hooks/use-categories';
 import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
+import { Input } from '@/shared/design-system/components/Input/Input';
 import type { Category } from '../types';
 
 interface CategoryFormProps {
@@ -63,32 +62,31 @@ export const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProp
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input
-          id="name"
-          {...register('name')}
-          placeholder="Enter category name"
-          aria-invalid={errors.name ? 'true' : 'false'}
-        />
-        {errors.name && (
-          <p className="text-sm text-red-600" role="alert">
-            {errors.name.message}
-          </p>
-        )}
-      </div>
+      <Input
+        id="name"
+        label="Name"
+        {...register('name')}
+        placeholder="Enter category name"
+        error={errors.name?.message}
+        aria-invalid={errors.name ? 'true' : 'false'}
+      />
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <label
+          htmlFor="description"
+          className="block mb-2 text-sm font-medium text-gray-900"
+        >
+          Description
+        </label>
         <textarea
           id="description"
           {...register('description')}
           placeholder="Enter category description"
-          className="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-[80px] w-full rounded-lg border px-3 py-3 text-sm bg-white transition-all duration-200 placeholder:text-gray-400 focus:outline-none focus:border-2 focus:border-primary-600 focus:ring-0 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50 border-gray-300"
           aria-invalid={errors.description ? 'true' : 'false'}
         />
         {errors.description && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="mt-1.5 text-xs text-red-500" role="alert">
             {errors.description.message}
           </p>
         )}
@@ -106,11 +104,11 @@ export const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProp
 
       <div className="flex justify-end space-x-2">
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} style={{ backgroundColor: '#ffffff', color: '#085299', border: '2px solid #085299' }} className="hover:bg-primary-50 transition-all duration-200">
             Cancel
           </Button>
         )}
-        <Button type="submit" loading={isSubmitting || mutation.isPending}>
+        <Button type="submit" loading={isSubmitting || mutation.isPending} style={{ backgroundColor: '#085299', color: '#ffffff' }}>
           {isEditMode ? 'Update Category' : 'Create Category'}
         </Button>
       </div>

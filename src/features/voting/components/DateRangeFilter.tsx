@@ -50,38 +50,42 @@ export const DateRangeFilter = ({ onFilterChange }: DateRangeFilterProps) => {
         <CardTitle>Filter by Date Range</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="startDate">Start Date</Label>
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
+          <div className="space-y-3">
+            <Label htmlFor="startDate" className="text-sm font-medium">Start Date</Label>
             <Input
               id="startDate"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              className="h-12 px-4"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="endDate">End Date</Label>
+          <div className="space-y-3">
+            <Label htmlFor="endDate" className="text-sm font-medium">End Date</Label>
             <Input
               id="endDate"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              className="h-12 px-4"
             />
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <Button
             onClick={handleApplyFilter}
             disabled={!startDate || !endDate}
-            className="w-full sm:w-auto"
+            variant="default"
+            style={{ backgroundColor: '#085299', color: '#ffffff' }}
+            className="w-full sm:w-auto h-11 px-6"
           >
             Apply Filter
           </Button>
           <Button
             variant="outline"
             onClick={handleClearFilter}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto h-11 px-6"
           >
             Clear Filter
           </Button>
