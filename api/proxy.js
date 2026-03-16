@@ -4,31 +4,47 @@
 const RAILWAY_API = 'https://linkedin-creative-awards-api-production.up.railway.app';
 
 export default async function handler(req, res) {
-  // Build the target URL: strip the leading /api from the path
-  const targetPath = req.url.replace(/^\/api/, '') || '/';
-  const targetUrl = `${RAILWAY_API}/api${targetPath}`;
+  // req.url is the full path including /api prefix, e.g. /api/admin/auth/login
+  // Strip the leading /api to get the downstream path
+  const downstreamPath = req.url.replace(/^\/api/, '') || '/';
+  const targetUrl = `${RAILWAY_API}/api${downstreamPath}`;
 
-  // Forward the request
-  const fetchOptions = {
-    method: req.method,
-    headers: {
-      'Content-Type': 'application/json',
-      // Forward Authorization header if present
-      ...(req.headers.authorization && { Authorization: req.headers.authorization }),
-    },
+  const headers = {
+    'Content-Type': 'application/json',
   };
 
-  // Attach body for non-GET/HEAD requests
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
+  if (req.headers.authorization) {
+    headers['Authorization'] = req.headers.authorization;
+  }
+
+  const fetchOptions = {
+    method: req.method,
+    headers,
+  };
+
+  // Vercel auto-parses the body — re-serialize it for the upstream request
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
     fetchOptions.body = JSON.stringify(req.body);
   }
 
   try {
     const response = await fetch(targetUrl, fetchOptions);
-    const data = await response.json();
 
+    // Forward all response headers from Railway
+    response.headers.forEach((value, key) => {
+      // Skip headers that cause issues when forwarded
+      if (!['transfer-encoding', 'connection'].includes(key.toLowerCase())) {
+        res.setHeader(key, value);
+      }
+    });
+
+    const data = await response.json();
     res.status(response.status).json(data);
   } catch (err) {
-    res.status(502).json({ error: { code: 'PROXY_ERROR', message: 'Failed to reach upstream API' } });
+    console.error('Proxy error:', err);
+    res.status(502).json({
+      error: { code: 'PROXY_ERROR', message: 'Failed to reach upstream API' },
+      timestamp: new Date().toISOString(),
+    });
   }
 }
