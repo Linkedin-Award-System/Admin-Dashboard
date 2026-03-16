@@ -5,16 +5,17 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { contentSchema, validateImageUrls, type ContentSchemaType } from '../schemas/content-schema';
 import { useUpdateContent } from '../hooks/use-content';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type RefObject } from 'react';
 import { Plus, Trash2, GripVertical, Save, AlertCircle, Info, Calendar, Heart, HelpCircle } from 'lucide-react';
 
 interface ContentEditorProps {
   initialData?: ContentSchemaType;
   activeSection: 'hero' | 'about' | 'timeline' | 'sponsors' | 'guide';
   onSuccess?: () => void;
+  submitRef?: RefObject<HTMLButtonElement | null>;
 }
 
-export const ContentEditor = ({ initialData, activeSection, onSuccess }: ContentEditorProps) => {
+export const ContentEditor = ({ initialData, activeSection, onSuccess, submitRef }: ContentEditorProps) => {
   const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
   const [isValidatingImages, setIsValidatingImages] = useState(false);
   const updateContent = useUpdateContent();
@@ -385,13 +386,14 @@ export const ContentEditor = ({ initialData, activeSection, onSuccess }: Content
           )}
           <Button
             type="submit"
+            ref={submitRef}
             variant="default"
             size="lg"
             style={{ backgroundColor: '#085299', color: '#ffffff' }}
             disabled={!isDirty || updateContent.isPending || isValidatingImages}
             loading={updateContent.isPending || isValidatingImages}
           >
-            {isValidatingImages ? 'Validating Assets...' : 'Sync Configuration'}
+            {isValidatingImages ? 'Validating Assets...' : 'Save Changes'}
           </Button>
         </div>
       </div>
