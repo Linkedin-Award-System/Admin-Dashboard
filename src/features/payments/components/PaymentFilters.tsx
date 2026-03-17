@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Button } from '@/shared/design-system';
-import { Filter, Calendar, X, CheckCircle2, Search } from 'lucide-react';
+import { Filter, Calendar, X, CheckCircle2, Search, ChevronDown } from 'lucide-react';
 import type { PaymentFilters as PaymentFiltersType } from '../types';
 
 interface PaymentFiltersProps {
@@ -12,12 +12,20 @@ interface PaymentFiltersProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: '', label: 'All Transactions', emoji: '📋' },
-  { value: 'COMPLETED', label: 'Completed', emoji: '✅' },
-  { value: 'PENDING', label: 'Pending', emoji: '⏳' },
-  { value: 'FAILED', label: 'Failed', emoji: '❌' },
-  { value: 'REFUNDED', label: 'Refunded', emoji: '↩️' },
+  { value: '',          label: 'All Transactions' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'PENDING',   label: 'Pending' },
+  { value: 'FAILED',    label: 'Failed' },
+  { value: 'REFUNDED',  label: 'Refunded' },
 ];
+
+const STATUS_COLORS: Record<string, string> = {
+  '':          '#9ca3af',
+  COMPLETED:   '#10b981',
+  PENDING:     '#f59e0b',
+  FAILED:      '#ef4444',
+  REFUNDED:    '#6366f1',
+};
 
 export const PaymentFiltersForm = ({ onFilterChange, onSearchChange }: PaymentFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +33,7 @@ export const PaymentFiltersForm = ({ onFilterChange, onSearchChange }: PaymentFi
   const [startDate, setStartDate] = useState(searchParams.get('startDate') || '');
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
   const [search, setSearch] = useState('');
+  const [statusOpen, setStatusOpen] = useState(false);
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
@@ -34,7 +43,8 @@ export const PaymentFiltersForm = ({ onFilterChange, onSearchChange }: PaymentFi
     if (statusParam) filters.status = statusParam as PaymentFiltersType['status'];
     if (startParam && endParam) { filters.startDate = startParam; filters.endDate = endParam; }
     onFilterChange(Object.keys(filters).length > 0 ? filters : undefined);
-  }, [searchParams, onFilterChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleApplyFilter = () => {
     const params = new URLSearchParams(searchParams);
@@ -56,6 +66,8 @@ export const PaymentFiltersForm = ({ onFilterChange, onSearchChange }: PaymentFi
   };
 
   const hasFilters = status || (startDate && endDate) || search;
+  const selectedLabel = STATUS_OPTIONS.find(o => o.value === status)?.label ?? 'All Transactions';
+  const selectedDot = STATUS_COLORS[status] ?? '#9ca3af';
 
   return (
     <div className="space-y-5">
@@ -77,7 +89,7 @@ export const PaymentFiltersForm = ({ onFilterChange, onSearchChange }: PaymentFi
         )}
       </div>
 
-      {/* Search by Tx Ref */}
+      {/* Search */}
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
           <Search size={12} className="text-gray-400" /> Search
@@ -94,27 +106,70 @@ export const PaymentFiltersForm = ({ onFilterChange, onSearchChange }: PaymentFi
         </div>
       </div>
 
-      {/* Status */}
+      {/* Status — collapsible */}
       <div className="space-y-2">
-        <Label htmlFor="status" className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-          <CheckCircle2 size={12} className="text-emerald-500" /> Status
-        </Label>
-        <div className="space-y-1.5">
-          {STATUS_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setStatus(opt.value)}
-              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2.5 ${
-                status === opt.value
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-transparent hover:border-border-light'
-              }`}
-            >
-              <span className="text-base leading-none">{opt.emoji}</span>
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={() => setStatusOpen(v => !v)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', background: 'none', border: 'none',
+            padding: 0, cursor: 'pointer',
+          }}
+        >
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+            <CheckCircle2 size={12} className="text-emerald-500" /> Status
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '3px 10px', borderRadius: 99,
+              background: '#f3f4f6', border: '1px solid #e5e7eb',
+              fontSize: 11, fontWeight: 600, color: '#374151',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDot, display: 'inline-block' }} />
+              {selectedLabel}
+            </span>
+            <ChevronDown
+              size={14}
+              style={{
+                color: '#9ca3af',
+                transform: statusOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }}
+            />
+          </div>
+        </button>
+
+        {statusOpen && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 4 }}>
+            {STATUS_OPTIONS.map(opt => {
+              const isSelected = status === opt.value;
+              const dot = STATUS_COLORS[opt.value] ?? '#9ca3af';
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => { setStatus(opt.value); setStatusOpen(false); }}
+                  style={{
+                    width: '100%', textAlign: 'left',
+                    padding: '0.5rem 0.875rem',
+                    borderRadius: '0.625rem',
+                    border: isSelected ? '1.5px solid #085299' : '1.5px solid transparent',
+                    background: isSelected ? '#eff6ff' : '#f9fafb',
+                    fontSize: 13, fontWeight: isSelected ? 600 : 500,
+                    color: isSelected ? '#085299' : '#374151',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Date Range */}
