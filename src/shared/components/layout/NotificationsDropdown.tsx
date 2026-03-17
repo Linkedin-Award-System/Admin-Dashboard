@@ -79,7 +79,6 @@ interface NotificationsDropdownProps {
 
 export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdownProps) {
   const [notifications, setNotifications] = useState(mockNotifications);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -222,15 +221,12 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
           notifications.map((n, idx) => {
             const cfg = TYPE_CONFIG[n.type];
             const Icon = cfg.icon;
-            const isHovered = hoveredId === n.id;
 
             return (
               <div
                 key={n.id}
                 className="notif-item"
                 onClick={() => markAsRead(n.id)}
-                onMouseEnter={() => setHoveredId(n.id)}
-                onMouseLeave={() => setHoveredId(null)}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
