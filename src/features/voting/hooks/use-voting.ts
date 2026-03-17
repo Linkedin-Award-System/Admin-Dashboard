@@ -42,6 +42,6 @@ export const useVotersByNominee = (nomineeId: string, page: number = 1, limit: n
     queryKey: ['voters-by-nominee', nomineeId, page, limit],
     queryFn: () => votingService.getVotersByNominee(nomineeId, page, limit),
     enabled: !!nomineeId,
-    staleTime: 30000,
+    staleTime: 0, // always fetch fresh — ensures new nominees show 0 voters
   });
 };
