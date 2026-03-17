@@ -13,13 +13,16 @@ import { config } from '@/lib/config';
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const CategoriesPage = lazy(() => import('@/pages/CategoriesPage'));
+const CategoryDetailPage = lazy(() => import('@/pages/CategoryDetailPage'));
 const NomineesPage = lazy(() => import('@/pages/NomineesPage'));
 const VotingPage = lazy(() => import('@/pages/VotingPage'));
 const PaymentsPage = lazy(() => import('@/pages/PaymentsPage'));
+const CreditsPage = lazy(() => import('@/pages/CreditsPage'));
 const ContentPage = lazy(() => import('@/pages/ContentPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
+const NomineeDetailPage = lazy(() => import('@/pages/NomineeDetailPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,10 +73,26 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/categories/:id"
+            element={
+              <AuthGuard>
+                <CategoryDetailPage />
+              </AuthGuard>
+            }
+          />
+          <Route
             path="/nominees"
             element={
               <AuthGuard>
                 <NomineesPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/nominees/:id"
+            element={
+              <AuthGuard>
+                <NomineeDetailPage />
               </AuthGuard>
             }
           />
@@ -90,6 +109,14 @@ function AppRoutes() {
             element={
               <AuthGuard>
                 <PaymentsPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/credits"
+            element={
+              <AuthGuard>
+                <CreditsPage />
               </AuthGuard>
             }
           />
