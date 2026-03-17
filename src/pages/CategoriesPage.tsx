@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/shared/components/layout';
 import { CategoryList } from '@/features/categories/components/CategoryList';
 import { CategoryForm } from '@/features/categories/components/CategoryForm';
@@ -8,6 +9,7 @@ import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/shared/design-system';
 
 export const CategoriesPage = () => {
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
@@ -38,6 +40,10 @@ export const CategoriesPage = () => {
 
   const handleDeleteSuccess = () => {
     setDeletingCategory(null);
+  };
+
+  const handleSelect = (category: Category) => {
+    navigate(`/categories/${category.id}`);
   };
 
   return (
@@ -78,6 +84,7 @@ export const CategoriesPage = () => {
             onCreate={handleCreate}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onSelect={handleSelect}
           />
         )}
 
