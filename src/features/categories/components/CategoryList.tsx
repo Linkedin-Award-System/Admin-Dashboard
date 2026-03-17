@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCategories } from '../hooks/use-categories';
+import { useNominees } from '@/features/nominees/hooks/use-nominees';
 import { Input } from '@/shared/components/ui/input';
 import { Button, PageHeader } from '@/shared/design-system';
 import { Pencil, Trash2, Plus, FolderOpen, Search, Users, Tag, TrendingUp } from 'lucide-react';
@@ -12,13 +13,26 @@ interface CategoryListProps {
   onEdit?: (category: Category) => void;
   onDelete?: (category: Category) => void;
   onCreate?: () => void;
+  onSelect?: (category: Category) => void;
 }
 
-export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) => {
+export const CategoryList = ({ onEdit, onDelete, onCreate, onSelect }: CategoryListProps) => {
   const { data: categories, isLoading, error } = useCategories();
+  const { data: nominees } = useNominees();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 18;
+
+  // Derive nominee counts per category from the nominees list (more accurate than API nomineeCount)
+  const nomineeCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    nominees?.forEach(n => {
+      n.categories?.forEach(cat => {
+        if (cat.id) map.set(cat.id, (map.get(cat.id) ?? 0) + 1);
+      });
+    });
+    return map;
+  }, [nominees]);
 
   const filteredCategories = useMemo(() => {
     if (!categories) return [];
@@ -33,8 +47,8 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
   }, [categories, searchTerm]);
 
   const totalNominees = useMemo(
-    () => (categories ?? []).reduce((sum, c) => sum + (c.nomineeCount ?? 0), 0),
-    [categories]
+    () => nominees?.length ?? (categories ?? []).reduce((sum, c) => sum + (c.nomineeCount ?? 0), 0),
+    [nominees, categories]
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
@@ -150,8 +164,10 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
               <CategoryCard
                 key={category.id}
                 category={category}
+                nomineeCount={nomineeCounts.get(category.id) ?? category.nomineeCount ?? 0}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onSelect={onSelect}
               />
             );
           })}
@@ -182,17 +198,20 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
 
 interface CardProps {
   category: Category;
+  nomineeCount: number;
   onEdit?: (c: Category) => void;
   onDelete?: (c: Category) => void;
+  onSelect?: (c: Category) => void;
 }
 
-const CategoryCard = ({ category, onEdit, onDelete }: CardProps) => {
+const CategoryCard = ({ category, nomineeCount, onEdit, onDelete, onSelect }: CardProps) => {
   const [hovered, setHovered] = useState(false);
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onSelect?.(category)}
       style={{
         background: '#fff',
         border: `1px solid ${hovered ? '#085299' : '#e5e7eb'}`,
@@ -203,7 +222,7 @@ const CategoryCard = ({ category, onEdit, onDelete }: CardProps) => {
         gap: '1rem',
         boxShadow: hovered ? '0 8px 24px rgba(8,82,153,0.12)' : '0 1px 3px rgba(0,0,0,0.06)',
         transition: 'all 0.2s ease',
-        cursor: 'default',
+        cursor: onSelect ? 'pointer' : 'default',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -225,7 +244,7 @@ const CategoryCard = ({ category, onEdit, onDelete }: CardProps) => {
           }}
         >
           <Users size={12} />
-          {category.nomineeCount ?? 0} nominees
+          {nomineeCount} nominees
         </div>
       </div>
 
@@ -243,7 +262,7 @@ const CategoryCard = ({ category, onEdit, onDelete }: CardProps) => {
       <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
         {onEdit && (
           <button
-            onClick={() => onEdit(category)}
+            onClick={(e) => { e.stopPropagation(); onEdit(category); }}
             title="Edit category"
             style={{
               flex: 1,
@@ -268,7 +287,7 @@ const CategoryCard = ({ category, onEdit, onDelete }: CardProps) => {
         )}
         {onDelete && (
           <button
-            onClick={() => onDelete(category)}
+            onClick={(e) => { e.stopPropagation(); onDelete(category); }}
             title="Delete category"
             style={{
               width: '2.25rem',
