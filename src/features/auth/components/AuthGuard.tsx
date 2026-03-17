@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
 
 interface AuthGuardProps {
@@ -8,19 +7,35 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // Redirect to login page if not authenticated
-      navigate('/login', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+  // Wait for auth check to complete before making any routing decision
+  if (!isInitialized || isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#f8fafc',
+      }}>
+        <div style={{
+          width: 40,
+          height: 40,
+          border: '3px solid #e2e8f0',
+          borderTopColor: '#085299',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
-  // Don't render children if not authenticated
   if (!isAuthenticated) {
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
