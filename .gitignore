@@ -58,7 +58,9 @@ Thumbs.db
 .temp
 .tmp
 
-# Temporary documentation files (auto-generated, not for version control)
+# ─── Auto-generated / temporary markdown docs ────────────────────────────────
+# These are AI-generated notes and should not be tracked in version control.
+# Only README.md and docs/ folder markdown files are kept.
 TASK_*.md
 TEST_*.md
 DEBUG_*.md
@@ -75,6 +77,10 @@ DEBUG_*.md
 *_REQUIRED*.md
 *_FIXED*.md
 *_GUIDE*.md
+*_IMPROVEMENT*.md
+*_ENHANCEMENT*.md
+*_ANALYSIS*.md
+*_REFERENCE*.md
 START_*.md
 WORK_*.md
 QUICK_*.md
