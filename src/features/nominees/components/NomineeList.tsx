@@ -20,6 +20,14 @@ interface NomineeListProps {
 }
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
+const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
+
+function resolveImageUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  return `${RAILWAY_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 const NomineeAvatar = ({ nominee }: { nominee: Nominee }) => {
   const [imgError, setImgError] = useState(false);
   const initials = nominee.fullName
@@ -43,7 +51,7 @@ const NomineeAvatar = ({ nominee }: { nominee: Nominee }) => {
     return (
       <div className="h-52 w-full overflow-hidden">
         <img
-          src={nominee.profileImageUrl}
+          src={resolveImageUrl(nominee.profileImageUrl)}
           alt={nominee.fullName}
           className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
           onError={() => setImgError(true)}
@@ -115,7 +123,7 @@ const NomineeCard = ({
       {/* Category chips */}
       {nominee.categories && nominee.categories.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-4">
-          {nominee.categories.slice(0, 2).map((cat, idx) => (
+          {nominee.categories.filter(cat => cat.name).slice(0, 2).map((cat, idx) => (
             <span
               key={cat.id ?? `cat-${idx}`}
               className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold uppercase tracking-wide"
@@ -123,9 +131,9 @@ const NomineeCard = ({
               {cat.name}
             </span>
           ))}
-          {nominee.categories.length > 2 && (
+          {nominee.categories.filter(cat => cat.name).length > 2 && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-[10px] font-semibold">
-              +{nominee.categories.length - 2}
+              +{nominee.categories.filter(cat => cat.name).length - 2}
             </span>
           )}
         </div>
@@ -184,7 +192,7 @@ const CompactRow = ({
   >
     <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
       {nominee.profileImageUrl ? (
-        <img src={nominee.profileImageUrl} alt={nominee.fullName} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        <img src={resolveImageUrl(nominee.profileImageUrl)} alt={nominee.fullName} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       ) : (
         <span className="text-xs font-bold text-white">
           {nominee.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
