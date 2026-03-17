@@ -11,6 +11,18 @@ interface PaymentsResponse {
   };
 }
 
+function unwrapPayments(raw: unknown): PaymentTransaction[] {
+  if (Array.isArray(raw)) return raw as PaymentTransaction[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj['payments'])) return obj['payments'] as PaymentTransaction[];
+    for (const k of ['data', 'items', 'results']) {
+      if (Array.isArray(obj[k])) return obj[k] as PaymentTransaction[];
+    }
+  }
+  return [];
+}
+
 export const paymentService = {
   async getAll(filters?: PaymentFilters): Promise<PaymentTransaction[]> {
     const params = filters
@@ -19,11 +31,11 @@ export const paymentService = {
           startDate: filters.startDate,
           endDate: filters.endDate,
           page: filters.page || 1,
-          limit: filters.limit || 50,
+          limit: filters.limit || 100,
         }
-      : { page: 1, limit: 50 };
-    const response = await apiClient.get<PaymentsResponse>('/admin/payments', { params });
-    return response.payments;
+      : { page: 1, limit: 100 };
+    const response = await apiClient.get<PaymentsResponse | PaymentTransaction[]>('/admin/payments', { params });
+    return unwrapPayments(response);
   },
 
   async getById(id: string): Promise<PaymentTransaction> {
@@ -32,14 +44,10 @@ export const paymentService = {
   },
 
   async getTotalRevenue(): Promise<number> {
-    // Use /admin/payments and calculate revenue client-side (only COMPLETED payments)
-    const response = await apiClient.get<PaymentsResponse>('/admin/payments', { 
-      params: { status: 'COMPLETED', limit: 1000 } 
+    const response = await apiClient.get<PaymentsResponse | PaymentTransaction[]>('/admin/payments', {
+      params: { status: 'COMPLETED', limit: 1000 },
     });
-    const payments = response.payments || [];
-    
-    // Sum up all completed payment amounts
-    const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
-    return totalRevenue;
+    const payments = unwrapPayments(response);
+    return payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
   },
 };
