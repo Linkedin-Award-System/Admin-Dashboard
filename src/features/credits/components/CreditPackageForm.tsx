@@ -8,8 +8,8 @@ import type { CreditPackage, CreditPackageFormData } from '../services/credit-se
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(80, 'Max 80 characters'),
   description: z.string().max(300, 'Max 300 characters').optional(),
-  credits: z.coerce.number().int('Must be a whole number').min(1, 'Must be at least 1'),
-  price: z.coerce.number().min(0, 'Must be 0 or more'),
+  credits: z.number().int('Must be a whole number').min(1, 'Must be at least 1'),
+  price: z.number().min(0, 'Must be 0 or more'),
   currency: z.string().min(1, 'Currency is required'),
   isActive: z.boolean(),
   isPopular: z.boolean(),
@@ -224,7 +224,7 @@ export const CreditPackageForm = ({
                 Credits
               </label>
               <input
-                {...register('credits')}
+                {...register('credits', { valueAsNumber: true })}
                 type="number"
                 min={1}
                 placeholder="100"
@@ -240,7 +240,7 @@ export const CreditPackageForm = ({
                 Price
               </label>
               <input
-                {...register('price')}
+                {...register('price', { valueAsNumber: true })}
                 type="number"
                 min={0}
                 step="0.01"
