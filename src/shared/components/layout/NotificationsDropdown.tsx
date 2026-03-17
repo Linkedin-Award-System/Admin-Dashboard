@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, X, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Bell, X, Check, UserPlus, CreditCard, Vote, AlertCircle } from 'lucide-react';
 
 interface Notification {
   id: string;
+  type: 'nominee' | 'payment' | 'voting' | 'system';
   title: string;
   message: string;
   time: string;
@@ -13,6 +13,7 @@ interface Notification {
 const mockNotifications: Notification[] = [
   {
     id: '1',
+    type: 'nominee',
     title: 'New Nominee Submission',
     message: 'John Doe submitted a nomination for Content Creation category',
     time: '5 minutes ago',
@@ -20,19 +21,36 @@ const mockNotifications: Notification[] = [
   },
   {
     id: '2',
+    type: 'payment',
     title: 'Payment Received',
-    message: 'Payment of $50 received from Jane Smith',
+    message: 'Payment of ETB 50 received from Jane Smith',
     time: '1 hour ago',
     read: false,
   },
   {
     id: '3',
+    type: 'voting',
     title: 'Voting Period Started',
     message: 'Public voting is now open for all categories',
     time: '2 hours ago',
     read: true,
   },
+  {
+    id: '4',
+    type: 'system',
+    title: 'System Update',
+    message: 'Platform maintenance scheduled for tonight at 11 PM',
+    time: '3 hours ago',
+    read: true,
+  },
 ];
+
+const typeConfig = {
+  nominee: { icon: UserPlus, bg: '#eff6ff', color: '#2563eb' },
+  payment:  { icon: CreditCard, bg: '#f0fdf4', color: '#16a34a' },
+  voting:   { icon: Vote,       bg: '#faf5ff', color: '#9333ea' },
+  system:   { icon: AlertCircle, bg: '#fff7ed', color: '#ea580c' },
+};
 
 interface NotificationsDropdownProps {
   isOpen: boolean;
@@ -41,6 +59,7 @@ interface NotificationsDropdownProps {
 
 export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdownProps) {
   const [notifications, setNotifications] = useState(mockNotifications);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,24 +68,16 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
         onClose();
       }
     }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
 
   const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -76,75 +87,240 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-border-light z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+      style={{
+        position: 'absolute',
+        right: 0,
+        top: 'calc(100% + 10px)',
+        width: 380,
+        background: '#ffffff',
+        borderRadius: 16,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06)',
+        border: '1px solid #f1f5f9',
+        zIndex: 50,
+        overflow: 'hidden',
+        animation: 'notifSlideIn 0.18s ease-out',
+      }}
     >
+      <style>{`
+        @keyframes notifSlideIn {
+          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border-light">
-        <div className="flex items-center gap-2">
-          <Bell size={20} className="text-primary-600" />
-          <h3 className="font-black text-text-primary">Notifications</h3>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 20px',
+        borderBottom: '1px solid #f1f5f9',
+        background: 'linear-gradient(135deg, #f8faff 0%, #ffffff 100%)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            background: 'linear-gradient(135deg, #085299 0%, #1a6bc4 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Bell size={16} color="#ffffff" />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', lineHeight: 1.2 }}>
+              Notifications
+            </div>
+            {unreadCount > 0 && (
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                {unreadCount} unread
+              </div>
+            )}
+          </div>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 bg-primary-600 text-white text-xs font-bold rounded-full">
+            <span style={{
+              padding: '2px 8px',
+              background: '#085299',
+              color: '#ffffff',
+              fontSize: 11,
+              fontWeight: 600,
+              borderRadius: 20,
+              marginLeft: 2,
+            }}>
               {unreadCount}
             </span>
           )}
         </div>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-bg-tertiary rounded-lg transition-colors"
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#94a3b8',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <X size={18} className="text-text-tertiary" />
+          <X size={16} />
         </button>
       </div>
 
-      {/* Notifications List */}
-      <div className="max-h-96 overflow-y-auto">
+      {/* List */}
+      <div style={{ maxHeight: 360, overflowY: 'auto' }}>
         {notifications.length === 0 ? (
-          <div className="p-8 text-center">
-            <Bell size={40} className="mx-auto text-text-quaternary mb-2" />
-            <p className="text-text-tertiary text-sm">No notifications</p>
+          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <Bell size={36} color="#cbd5e1" style={{ margin: '0 auto 10px' }} />
+            <p style={{ color: '#94a3b8', fontSize: 13 }}>No notifications yet</p>
           </div>
         ) : (
-          <div className="divide-y divide-border-light">
-            {notifications.map((notification) => (
+          notifications.map((n, idx) => {
+            const cfg = typeConfig[n.type];
+            const Icon = cfg.icon;
+            const isHovered = hoveredId === n.id;
+            return (
               <div
-                key={notification.id}
-                className={cn(
-                  "p-4 hover:bg-bg-tertiary transition-colors cursor-pointer",
-                  !notification.read && "bg-primary-50/30"
-                )}
-                onClick={() => markAsRead(notification.id)}
+                key={n.id}
+                onClick={() => markAsRead(n.id)}
+                onMouseEnter={() => setHoveredId(n.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  padding: '14px 20px',
+                  cursor: 'pointer',
+                  background: isHovered
+                    ? '#f8fafc'
+                    : !n.read
+                    ? '#fafcff'
+                    : '#ffffff',
+                  borderBottom: idx < notifications.length - 1 ? '1px solid #f8fafc' : 'none',
+                  transition: 'background 0.15s',
+                  position: 'relative',
+                }}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <h4 className="font-bold text-sm text-text-primary mb-1">
-                      {notification.title}
-                    </h4>
-                    <p className="text-xs text-text-tertiary mb-2">
-                      {notification.message}
-                    </p>
-                    <span className="text-[10px] text-text-quaternary font-medium">
-                      {notification.time}
+                {/* Unread left bar */}
+                {!n.read && (
+                  <div style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 3,
+                    background: 'linear-gradient(180deg, #085299, #1a6bc4)',
+                    borderRadius: '0 2px 2px 0',
+                  }} />
+                )}
+
+                {/* Icon badge */}
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: cfg.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  marginTop: 1,
+                }}>
+                  <Icon size={17} color={cfg.color} />
+                </div>
+
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 3,
+                  }}>
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: n.read ? 500 : 600,
+                      color: '#0f172a',
+                      lineHeight: 1.3,
+                    }}>
+                      {n.title}
                     </span>
+                    {!n.read && (
+                      <div style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: '#085299',
+                        flexShrink: 0,
+                        marginLeft: 8,
+                      }} />
+                    )}
                   </div>
-                  {!notification.read && (
-                    <div className="w-2 h-2 bg-primary-600 rounded-full mt-1" />
-                  )}
+                  <p style={{
+                    fontSize: 12,
+                    color: '#64748b',
+                    lineHeight: 1.5,
+                    margin: '0 0 6px',
+                  }}>
+                    {n.message}
+                  </p>
+                  <span style={{
+                    fontSize: 11,
+                    color: '#94a3b8',
+                    fontWeight: 500,
+                  }}>
+                    {n.time}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
       </div>
 
       {/* Footer */}
-      {notifications.length > 0 && unreadCount > 0 && (
-        <div className="p-3 border-t border-border-light">
+      {unreadCount > 0 && (
+        <div style={{
+          padding: '12px 20px',
+          borderTop: '1px solid #f1f5f9',
+          background: '#fafafa',
+        }}>
           <button
             onClick={markAllAsRead}
-            className="w-full py-2 text-xs font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+            style={{
+              width: '100%',
+              padding: '9px 0',
+              background: 'transparent',
+              border: '1px solid #e2e8f0',
+              borderRadius: 10,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#085299',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#eff6ff';
+              e.currentTarget.style.borderColor = '#085299';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+            }}
           >
-            <Check size={14} />
+            <Check size={13} />
             Mark all as read
           </button>
         </div>
