@@ -20,10 +20,17 @@ function unwrapNominees(raw: unknown): Nominee[] {
 
 export const nomineeService = {
   async getAll(categoryId?: string): Promise<Nominee[]> {
-    const params: Record<string, string> = { limit: '200' };
-    if (categoryId) params.categoryId = categoryId;
+    // Always fetch all nominees — backend may not support categoryId filtering
+    const params: Record<string, string> = { limit: '500' };
     const response = await apiClient.get<NomineesResponse | Nominee[]>('/admin/nominees', { params });
-    return unwrapNominees(response);
+    const all = unwrapNominees(response);
+    // Filter client-side if a categoryId is provided
+    if (!categoryId) return all;
+    return all.filter((n) =>
+      n.categories?.some((c) =>
+        typeof c === 'string' ? c === categoryId : c.id === categoryId
+      )
+    );
   },
 
   async getById(id: string): Promise<Nominee> {
