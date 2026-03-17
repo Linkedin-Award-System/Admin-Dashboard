@@ -67,7 +67,7 @@ export function VisualTest2_CustomRendering() {
       align: 'right',
       render: (value) => (
         <span className="font-semibold text-green-600">
-          ${value.toLocaleString()}
+          ETB {value.toLocaleString()}
         </span>
       )
     },
@@ -174,7 +174,7 @@ export function VisualTest5_InteractiveTable() {
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm font-medium text-blue-900">Clicked Row:</p>
             <p className="text-sm text-blue-700">
-              {clickedRow.name} - {clickedRow.email} - ${clickedRow.amount}
+              {clickedRow.name} - {clickedRow.email} - ETB {clickedRow.amount}
             </p>
           </div>
         )}

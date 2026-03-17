@@ -40,6 +40,14 @@ export const authService = {
     return apiClient.get<AuthUser>('/admin/auth/me');
   },
 
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post('/admin/auth/forgot-password', { email });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await apiClient.post('/admin/auth/reset-password', { token, newPassword });
+  },
+
   async logout(): Promise<void> {
     try {
       await apiClient.post('/admin/auth/logout');

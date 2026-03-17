@@ -157,7 +157,7 @@ export function MetricCardExamples() {
               <p className="text-xs uppercase text-gray-500 tracking-wider mb-1">
                 Revenue
               </p>
-              <p className="text-3xl font-semibold text-gray-900">$45.2K</p>
+              <p className="text-3xl font-semibold text-gray-900">ETB 45.2K</p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
               <DollarSign className="h-6 w-6 text-green-600" />

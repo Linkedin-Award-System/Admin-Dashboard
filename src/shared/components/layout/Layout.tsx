@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out min-h-screen flex flex-col",
-          isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+          isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
         <TopBar onMenuClick={toggleSidebar} />

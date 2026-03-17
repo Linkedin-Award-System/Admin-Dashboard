@@ -1,219 +1,392 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { usePayments } from '../hooks/use-payments';
 import { StatusBadge } from '@/shared/design-system/patterns/StatusBadge';
-import { Button } from '@/shared/components/ui/button';
+import { Button } from '@/shared/design-system';
 import { Label } from '@/shared/components/ui/label';
 import { ExportButton } from '@/features/exports/components/ExportButton';
 import { exportService } from '@/features/exports/services/export-service';
 import { PaymentListSkeleton } from './PaymentListSkeleton';
 import type { PaymentFilters, PaymentTransaction } from '../types';
 import { cn } from '@/lib/utils';
-import { 
-  CreditCard, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle, 
-  RotateCcw, 
-  FileText,
-  Building2,
-  Calendar,
-  Hash
+import {
+  CreditCard, Clock, CheckCircle2, AlertCircle, RotateCcw,
+  FileText, Building2, Calendar, Hash, User, TrendingUp, AlertTriangle,
 } from 'lucide-react';
-import { formatCurrency } from '@/features/dashboard/utils/format-utils';
+import { formatCurrency, formatDateTime, formatRelativeTime } from '@/features/dashboard/utils/format-utils';
 
 interface PaymentListProps {
   filters?: PaymentFilters;
+  searchQuery?: string;
 }
 
-const getStatusConfig = (status: PaymentTransaction['status']) => {
-  switch (status) {
-    case 'COMPLETED':
-      return { status: 'completed' as const, icon: CheckCircle2, label: 'Completed' };
-    case 'PENDING':
-      return { status: 'pending' as const, icon: Clock, label: 'Pending' };
-    case 'FAILED':
-      return { status: 'failed' as const, icon: AlertCircle, label: 'Failed' };
-    case 'REFUNDED':
-      return { status: 'refunded' as const, icon: RotateCcw, label: 'Refunded' };
-    default:
-      return { status: 'inactive' as const, icon: CreditCard, label: status };
-  }
+const STATUS_CONFIG: Record<string, {
+  badge: 'completed' | 'pending' | 'failed' | 'refunded' | 'inactive';
+  icon: React.ElementType;
+  label: string;
+  iconBg: string;
+  rowAccent: string;
+  amountColor: string;
+}> = {
+  COMPLETED: {
+    badge: 'completed',
+    icon: CheckCircle2,
+    label: 'Completed',
+    iconBg: 'bg-gradient-to-br from-emerald-400 to-green-500',
+    rowAccent: 'border-l-emerald-400',
+    amountColor: 'text-emerald-700',
+  },
+  PENDING: {
+    badge: 'pending',
+    icon: Clock,
+    label: 'Pending',
+    iconBg: 'bg-gradient-to-br from-amber-400 to-orange-400',
+    rowAccent: 'border-l-amber-400',
+    amountColor: 'text-amber-700',
+  },
+  FAILED: {
+    badge: 'failed',
+    icon: AlertCircle,
+    label: 'Failed',
+    iconBg: 'bg-gradient-to-br from-red-400 to-rose-500',
+    rowAccent: 'border-l-red-400',
+    amountColor: 'text-red-600',
+  },
+  REFUNDED: {
+    badge: 'refunded',
+    icon: RotateCcw,
+    label: 'Refunded',
+    iconBg: 'bg-gradient-to-br from-blue-400 to-indigo-500',
+    rowAccent: 'border-l-blue-400',
+    amountColor: 'text-blue-700',
+  },
 };
 
-const formatDatePremium = (dateString: string) => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-};
+const getStatusConfig = (status: string) =>
+  STATUS_CONFIG[status] ?? {
+    badge: 'inactive' as const,
+    icon: CreditCard,
+    label: status,
+    iconBg: 'bg-gradient-to-br from-gray-400 to-slate-500',
+    rowAccent: 'border-l-gray-300',
+    amountColor: 'text-gray-700',
+  };
 
-export const PaymentList = ({ filters }: PaymentListProps) => {
+const QUICK_FILTERS = [
+  { label: 'All', value: '' },
+  { label: 'Completed', value: 'COMPLETED' },
+  { label: 'Pending', value: 'PENDING' },
+  { label: 'Failed', value: 'FAILED' },
+  { label: 'Refunded', value: 'REFUNDED' },
+];
+
+export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => {
   const { data: payments, isLoading, error } = usePayments(filters);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [quickFilter, setQuickFilter] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const ITEMS_PER_PAGE = 15;
 
-  const sortedPayments = useMemo(() => {
+  const processedPayments = useMemo(() => {
     if (!payments) return [];
-    return [...payments].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    let list = [...payments].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    if (quickFilter) list = list.filter(p => p.status === quickFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        p =>
+          p.txRef.toLowerCase().includes(q) ||
+          p.userId.toLowerCase().includes(q) ||
+          p.packageId.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [payments, quickFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(processedPayments.length / ITEMS_PER_PAGE));
+  const paginatedPayments = processedPayments.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Summary counts
+  const counts = useMemo(() => {
+    if (!payments) return { total: 0, completed: 0, pending: 0, failed: 0, refunded: 0 };
+    return {
+      total: payments.length,
+      completed: payments.filter(p => p.status === 'COMPLETED').length,
+      pending: payments.filter(p => p.status === 'PENDING').length,
+      failed: payments.filter(p => p.status === 'FAILED').length,
+      refunded: payments.filter(p => p.status === 'REFUNDED').length,
+    };
   }, [payments]);
 
-  if (isLoading) {
-    return <PaymentListSkeleton />;
-  }
+  const handleQuickFilter = (val: string) => {
+    setQuickFilter(val);
+    setCurrentPage(1);
+  };
+
+  if (isLoading) return <PaymentListSkeleton />;
 
   if (error) {
     return (
-      <div className="p-16 rounded-[2.5rem] border-2 border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50/30 backdrop-blur-sm text-center shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-        <div className="inline-flex p-5 bg-red-100 rounded-3xl mb-6 shadow-lg">
-          <AlertCircle size={56} className="text-red-600" strokeWidth={2.5} />
+      <div className="p-16 rounded-[2.5rem] border border-red-200 bg-red-50/50 text-center">
+        <div className="inline-flex p-4 bg-red-100 rounded-2xl mb-4">
+          <AlertTriangle size={40} className="text-red-600" />
         </div>
-        <h3 className="text-xl font-semibold text-red-800">Payment Data Unavailable</h3>
-        <p className="text-red-700 font-medium mt-3 max-w-md mx-auto leading-relaxed">
-          {error instanceof Error ? error.message : 'An error occurred while loading payment transactions'}
+        <h3 className="text-lg font-semibold text-red-800">Payment Data Unavailable</h3>
+        <p className="text-red-600 mt-2 max-w-sm mx-auto text-sm">
+          {error instanceof Error ? error.message : 'An error occurred while loading transactions'}
         </p>
-        <Button 
-          variant="outline" 
-          className="mt-8 border-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 px-8 py-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5" 
-          onClick={() => window.location.reload()}
-        >
-          <RotateCcw size={18} className="mr-2" />
-          Try Again
+        <Button variant="secondary" className="mt-6 rounded-xl border-red-200 text-red-700" onClick={() => window.location.reload()}>
+          <RotateCcw size={16} className="mr-2" /> Try Again
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Enhanced Header with Total & Export */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-white via-blue-50/30 to-white p-8 rounded-[2.5rem] border-2 border-blue-100/50 shadow-xl hover:shadow-2xl transition-all duration-500">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-4">
-            <span className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl text-white shadow-lg">
-              <CreditCard size={32} strokeWidth={2.5} />
-            </span>
-            Transactions
-          </h2>
-          <div className="flex items-center gap-3 ml-1">
-            <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-            <p className="text-sm font-normal text-gray-500">
-              Showing <span className="text-green-600 font-semibold">{sortedPayments.length}</span> of <span className="font-semibold">{payments?.length || 0}</span> recent transactions
-            </p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Transactions header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-[1.75rem] border border-border-light shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-[#085299] to-[#0a66c2] rounded-2xl text-white shadow-md">
+            <CreditCard size={24} strokeWidth={2} />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Transactions</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <p className="text-sm text-gray-500">
+                <span className="font-semibold text-gray-700">{processedPayments.length}</span> of{' '}
+                <span className="font-semibold">{counts.total}</span> transactions
+              </p>
+            </div>
           </div>
         </div>
-        
         <ExportButton
-          onExport={(format) => exportService.exportPayments(format, filters)}
+          onExport={(format) => exportService.exportPayments(format, processedPayments)}
           filename={`payments${filters?.status ? `-${filters.status}` : ''}`}
           label="Export Ledger"
-          className="rounded-2xl border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 h-14 px-8 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+          className="rounded-xl border-border-light hover:bg-bg-tertiary h-11 px-5 font-semibold"
         />
       </div>
 
-      {sortedPayments.length === 0 ? (
-        <div className="py-24 text-center bg-gradient-to-br from-white via-slate-50 to-white backdrop-blur-md rounded-[3rem] border-2 border-dashed border-gray-300 shadow-inner animate-in fade-in zoom-in-95 duration-500">
-          <div className="inline-flex p-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl shadow-lg mx-auto mb-6">
-            <FileText className="text-gray-500" size={48} strokeWidth={2} />
+      {/* Summary stats bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Completed', count: counts.completed, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+          { label: 'Pending', count: counts.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+          { label: 'Failed', count: counts.failed, icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100' },
+          { label: 'Refunded', count: counts.refunded, icon: RotateCcw, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
+        ].map(({ label, count, icon: Icon, color, bg, border }) => (
+          <button
+            key={label}
+            onClick={() => handleQuickFilter(quickFilter === label.toUpperCase() ? '' : label.toUpperCase())}
+            className={cn(
+              'flex items-center gap-3 p-4 rounded-2xl border transition-all hover:shadow-sm',
+              bg, border,
+              quickFilter === label.toUpperCase() && 'ring-2 ring-offset-1 ring-primary-400'
+            )}
+          >
+            <Icon className={cn('h-5 w-5 shrink-0', color)} />
+            <div className="text-left">
+              <div className={cn('text-xl font-bold', color)}>{count}</div>
+              <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Quick filter pills */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <TrendingUp size={14} className="text-text-tertiary shrink-0" />
+        {QUICK_FILTERS.map(f => (
+          <button
+            key={f.value}
+            onClick={() => handleQuickFilter(f.value)}
+            className={cn(
+              'px-4 py-1.5 rounded-full text-xs font-semibold transition-all border',
+              quickFilter === f.value
+                ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                : 'bg-white text-gray-600 border-border-light hover:bg-bg-tertiary'
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Transaction list */}
+      {processedPayments.length === 0 ? (
+        <div className="py-20 text-center bg-white rounded-[2rem] border border-dashed border-border-light">
+          <div className="inline-flex p-5 bg-gray-100 rounded-2xl mb-4">
+            <FileText className="text-gray-400" size={40} />
           </div>
-          <h3 className="text-xl font-semibold text-gray-800">No Records Found</h3>
-          <p className="text-gray-600 font-medium mt-3 max-w-sm mx-auto leading-relaxed">
-            Adjust your filters or try a different date range to view transactions.
-          </p>
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
-            <div className="h-2 w-2 bg-gray-400 rounded-full animate-pulse" />
-            <span className="font-semibold">Awaiting filter criteria</span>
-          </div>
+          <h3 className="text-lg font-semibold text-gray-800">No Transactions Found</h3>
+          <p className="text-gray-500 mt-2 text-sm">Adjust your filters to view transactions.</p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {sortedPayments.map((payment, index) => {
-            const status = getStatusConfig(payment.status);
-            const StatusIcon = status.icon;
-            
+        <div className="space-y-3">
+          {paginatedPayments.map((payment: PaymentTransaction, index: number) => {
+            const cfg = getStatusConfig(payment.status);
+            const StatusIcon = cfg.icon;
+            const isExpanded = expandedId === payment.id;
+
             return (
-              <div 
-                key={payment.id} 
-                className="group relative bg-white/90 backdrop-blur-sm p-7 rounded-[2rem] border-2 border-gray-200/60 shadow-lg hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-                style={{ animationDelay: `${index * 40}ms` }}
+              <div
+                key={payment.id}
+                className={cn(
+                  'group bg-white rounded-[1.5rem] border border-border-light border-l-4 shadow-sm hover:shadow-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 overflow-hidden',
+                  cfg.rowAccent
+                )}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
-                <div className="flex flex-col xl:flex-row xl:items-center gap-6">
-                  {/* Enhanced Status Indicator Area */}
-                  <div className="flex items-center gap-4 xl:w-64 shrink-0">
-                    <div className={cn(
-                      "h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
-                      payment.status === 'COMPLETED' ? "bg-gradient-to-br from-green-400 to-emerald-500 text-white" :
-                      payment.status === 'PENDING' ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white" :
-                      payment.status === 'FAILED' ? "bg-gradient-to-br from-red-400 to-rose-500 text-white" :
-                      "bg-gradient-to-br from-blue-400 to-indigo-500 text-white"
-                    )}>
-                      <StatusIcon size={26} strokeWidth={2.5} />
+                {/* Main row */}
+                <div
+                  className="flex flex-col lg:flex-row lg:items-center gap-4 p-5 cursor-pointer"
+                  onClick={() => setExpandedId(isExpanded ? null : payment.id)}
+                >
+                  {/* Status icon + badge + date */}
+                  <div className="flex items-center gap-3 lg:w-56 shrink-0">
+                    <div className={cn('h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 transition-transform duration-200 group-hover:scale-105', cfg.iconBg)}>
+                      <StatusIcon size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={status.status} size="sm" />
-                        {payment.status === 'COMPLETED' && <CheckCircle2 size={14} className="text-green-500" />}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-gray-400 text-xs font-normal mt-1.5">
-                        <Clock size={12} />
-                        {formatDatePremium(payment.createdAt)}
+                      <StatusBadge status={cfg.badge} size="sm" />
+                      <div className="flex items-center gap-1 text-gray-400 text-xs mt-1">
+                        <Clock size={10} />
+                        <span>{formatRelativeTime(payment.createdAt)}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Transaction ID & Meta */}
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Hash size={10} /> Reference ID
-                      </Label>
-                      <p className="text-sm font-mono font-medium text-gray-700 select-all truncate">
-                        {payment.txRef}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Building2 size={10} /> Allocation
-                      </Label>
-                      <p className="text-sm font-medium text-gray-700">
-                        Package ID: {payment.packageId}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Calendar size={10} /> Settlement
-                      </Label>
-                      <p className="text-sm font-medium text-gray-700">
-                        {payment.completedAt ? formatDatePremium(payment.completedAt) : '--'}
-                      </p>
-                    </div>
+                  {/* Tx Ref */}
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                      <Hash size={9} /> Reference
+                    </Label>
+                    <p className="text-sm font-mono font-semibold text-gray-800 truncate select-all">
+                      {payment.txRef}
+                    </p>
                   </div>
 
-                  {/* Enhanced Amount / Action Area */}
-                  <div className="xl:w-52 text-right shrink-0 flex items-center justify-between xl:justify-end gap-6 border-t-2 xl:border-t-0 xl:border-l-2 border-gray-200/60 pt-5 xl:pt-0 xl:pl-6">
-                    <div className="space-y-1">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</div>
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {formatCurrency(payment.amount, payment.currency)}
-                      </div>
+                  {/* User */}
+                  <div className="hidden md:block w-36 shrink-0">
+                    <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                      <User size={9} /> User
+                    </Label>
+                    <p className="text-sm font-medium text-gray-700 truncate">{payment.userId || '—'}</p>
+                  </div>
+
+                  {/* Date */}
+                  <div className="hidden lg:block w-36 shrink-0">
+                    <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                      <Calendar size={9} /> Date
+                    </Label>
+                    <p className="text-xs font-medium text-gray-600">{formatDateTime(payment.createdAt)}</p>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="lg:w-40 shrink-0 text-right">
+                    <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Amount</div>
+                    <div className={cn('text-xl font-bold', cfg.amountColor)}>
+                      {formatCurrency(payment.amount, payment.currency)}
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="rounded-xl hover:bg-blue-50 hover:text-blue-600 text-gray-400 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 shadow-sm"
-                    >
-                      <FileText size={20} strokeWidth={2} />
-                    </Button>
                   </div>
                 </div>
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div className="px-5 pb-5 pt-0 border-t border-border-light/60 bg-gray-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                      <div>
+                        <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                          <Hash size={9} /> Transaction ID
+                        </Label>
+                        <p className="text-xs font-mono text-gray-700 break-all">{payment.id}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                          <Building2 size={9} /> Package ID
+                        </Label>
+                        <p className="text-xs font-medium text-gray-700">{payment.packageId || '—'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                          <Calendar size={9} /> Settlement Date
+                        </Label>
+                        <p className="text-xs font-medium text-gray-700">
+                          {payment.completedAt ? formatDateTime(payment.completedAt) : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                          <User size={9} /> User ID
+                        </Label>
+                        <p className="text-xs font-mono text-gray-700 break-all">{payment.userId || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4 border-t border-border-light">
+          <p className="text-sm text-text-tertiary font-medium">
+            Page {currentPage} of {totalPages} &middot; {processedPayments.length} transactions
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded-xl h-10 px-4"
+            >
+              Previous
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, idx) =>
+                p === '...' ? (
+                  <span key={`e-${idx}`} className="px-2 text-text-tertiary text-sm">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p as number)}
+                    className={cn(
+                      'h-10 w-10 rounded-xl text-sm font-medium transition-all',
+                      currentPage === p
+                        ? 'bg-primary-600 text-white shadow-sm'
+                        : 'bg-white border border-border-light text-gray-700 hover:bg-bg-tertiary'
+                    )}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-xl h-10 px-4"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>

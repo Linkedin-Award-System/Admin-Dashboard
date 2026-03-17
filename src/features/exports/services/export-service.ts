@@ -1,107 +1,97 @@
 /**
  * Export Service
- * Handles data export operations for categories, vote stats, and payments
- * Uses server-side CSV export endpoints
+ * Handles client-side data export operations using generateCSV
  */
 
+import { generateCSV } from '../utils/csv-generator';
 import type { ExportFormat } from '../types';
-import type { PaymentFilters } from '@/features/payments/types';
-import type { DateRange } from '@/features/voting/types';
+import type { Category } from '@/features/categories/types';
+import type { VoteStats } from '@/features/voting/types';
+import type { PaymentTransaction } from '@/features/payments/types';
+import type { Nominee } from '@/features/nominees/types';
 
 export const exportService = {
   /**
-   * Export categories - uses server CSV endpoint
+   * Export categories as CSV
    */
-  async exportCategories(format: ExportFormat): Promise<Blob> {
-    if (format === 'csv') {
-      // Use server-side CSV export
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/categories/export`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to export categories');
-      }
-      
-      return response.blob();
-    } else {
-      // PDF generation via server-side API
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/categories/export?format=pdf`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to export categories as PDF');
-      }
-      
-      return response.blob();
-    }
+  async exportCategories(_format: ExportFormat, data: Category[]): Promise<Blob> {
+    const rows = data.map(c => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      nomineeCount: c.nomineeCount,
+    }));
+    const headers = [
+      { key: 'id' as const, label: 'ID' },
+      { key: 'name' as const, label: 'Name' },
+      { key: 'description' as const, label: 'Description' },
+      { key: 'nomineeCount' as const, label: 'Nominee Count' },
+    ];
+    return generateCSV(rows, headers);
   },
 
   /**
-   * Export vote statistics - uses server CSV endpoint
+   * Export vote statistics as CSV
    */
-  async exportVoteStats(format: ExportFormat, dateRange?: DateRange): Promise<Blob> {
-    const params = new URLSearchParams();
-    
-    if (dateRange) {
-      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
-      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
-    }
-    
-    if (format === 'pdf') {
-      params.append('format', 'pdf');
-    }
-    
-    const queryString = params.toString();
-    const url = `${import.meta.env.VITE_API_BASE_URL}/admin/votes/export${queryString ? `?${queryString}` : ''}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to export vote statistics');
-    }
-    
-    return response.blob();
+  async exportVoteStats(_format: ExportFormat, data: VoteStats[]): Promise<Blob> {
+    const rows = data.map(stat => ({
+      categoryName: stat.categoryName,
+      leadingNominee: stat.leadingNominee.name,
+      totalVotes: stat.totalVotes,
+    }));
+
+    const headers = [
+      { key: 'categoryName' as const, label: 'Category Name' },
+      { key: 'leadingNominee' as const, label: 'Leading Nominee' },
+      { key: 'totalVotes' as const, label: 'Total Votes' },
+    ];
+
+    return generateCSV(rows, headers);
   },
 
   /**
-   * Export payment transactions - uses server CSV endpoint
+   * Export payment transactions as CSV
    */
-  async exportPayments(format: ExportFormat, filters?: PaymentFilters): Promise<Blob> {
-    const params = new URLSearchParams();
-    
-    if (filters) {
-      if (filters.status) params.append('status', filters.status);
-      if (filters.startDate) params.append('startDate', filters.startDate);
-      if (filters.endDate) params.append('endDate', filters.endDate);
-    }
-    
-    if (format === 'pdf') {
-      params.append('format', 'pdf');
-    }
-    
-    const queryString = params.toString();
-    const url = `${import.meta.env.VITE_API_BASE_URL}/admin/payments/export${queryString ? `?${queryString}` : ''}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to export payments');
-    }
-    
-    return response.blob();
+  async exportPayments(_format: ExportFormat, data: PaymentTransaction[]): Promise<Blob> {
+    const rows = data.map(p => ({
+      id: p.id,
+      txRef: p.txRef,
+      amount: p.amount,
+      currency: p.currency,
+      status: p.status,
+      createdAt: p.createdAt,
+    }));
+    const headers = [
+      { key: 'id' as const, label: 'ID' },
+      { key: 'txRef' as const, label: 'Tx Ref' },
+      { key: 'amount' as const, label: 'Amount' },
+      { key: 'currency' as const, label: 'Currency' },
+      { key: 'status' as const, label: 'Status' },
+      { key: 'createdAt' as const, label: 'Created At' },
+    ];
+    return generateCSV(rows, headers);
+  },
+
+  /**
+   * Export nominees as CSV
+   */
+  async exportNominees(_format: ExportFormat, data: Nominee[]): Promise<Blob> {
+    const rows = data.map(nominee => ({
+      id: nominee.id,
+      fullName: nominee.fullName,
+      organization: nominee.organization,
+      voteCount: nominee.voteCount,
+      categories: nominee.categories.map(c => c.name).join(';'),
+    }));
+
+    const headers = [
+      { key: 'id' as const, label: 'ID' },
+      { key: 'fullName' as const, label: 'Full Name' },
+      { key: 'organization' as const, label: 'Organization' },
+      { key: 'voteCount' as const, label: 'Vote Count' },
+      { key: 'categories' as const, label: 'Categories' },
+    ];
+
+    return generateCSV(rows, headers);
   },
 };

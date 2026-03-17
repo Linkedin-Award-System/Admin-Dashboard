@@ -10,24 +10,15 @@ import type {
   NomineeStatusData,
 } from '../types';
 
-/**
- * Analytics service for fetching dashboard analytics data
- * Uses real API endpoints: /admin/dashboard, /admin/votes, /admin/payments, /admin/categories, /admin/nominees
- */
+// ── Raw API shapes ────────────────────────────────────────────────────────────
 
-// Helper types for API responses
 interface DashboardApiResponse {
   totalVotes: number;
   uniqueVoters: number;
   totalRevenue: number;
   categoriesCount: number;
   nomineesCount: number;
-  topNominees?: Array<{
-    id: string;
-    fullName: string;
-    voteCount: number;
-    category: string;
-  }>;
+  topNominees?: Array<{ id: string; fullName: string; voteCount: number; category: string }>;
 }
 
 interface Vote {
@@ -40,6 +31,11 @@ interface Vote {
   createdAt: string;
 }
 
+interface VotesApiResponse {
+  votes: Vote[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
 interface Payment {
   id: string;
   amount: number;
@@ -47,10 +43,16 @@ interface Payment {
   createdAt: string;
 }
 
+interface PaymentsApiResponse {
+  payments: Payment[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
 interface Category {
   id: string;
   name: string;
   nomineeCount?: number;
+  _count?: { nominees?: number };
 }
 
 interface Nominee {
@@ -60,235 +62,301 @@ interface Nominee {
   categories: Array<{ id: string; name: string }>;
 }
 
+interface NomineesApiResponse {
+  nominees: Nominee[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+interface CategoriesApiResponse {
+  categories: Category[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Unwrap API response that may be a plain array OR a paginated wrapper */
+function unwrapArray<T>(raw: unknown, key: string): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj[key])) return obj[key] as T[];
+    // Try common wrapper keys
+    for (const k of ['data', 'items', 'results']) {
+      if (Array.isArray(obj[k])) return obj[k] as T[];
+    }
+  }
+  return [];
+}
+
+/** Fetch ALL pages of votes */
+async function fetchAllVotes(params: Record<string, unknown> = {}): Promise<Vote[]> {
+  const first = await apiClient.get<VotesApiResponse | Vote[]>('/admin/votes', {
+    params: { ...params, page: 1, limit: 100 },
+  });
+  const votes = [...unwrapArray<Vote>(first, 'votes')];
+  const totalPages = (first as VotesApiResponse)?.pagination?.totalPages ?? 1;
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        apiClient.get<VotesApiResponse | Vote[]>('/admin/votes', {
+          params: { ...params, page: i + 2, limit: 100 },
+        })
+      )
+    );
+    rest.forEach(r => votes.push(...unwrapArray<Vote>(r, 'votes')));
+  }
+  return votes;
+}
+
+/** Fetch ALL pages of payments */
+async function fetchAllPayments(params: Record<string, unknown> = {}): Promise<Payment[]> {
+  const first = await apiClient.get<PaymentsApiResponse | Payment[]>('/admin/payments', {
+    params: { ...params, page: 1, limit: 100 },
+  });
+  const payments = [...unwrapArray<Payment>(first, 'payments')];
+  const totalPages = (first as PaymentsApiResponse)?.pagination?.totalPages ?? 1;
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        apiClient.get<PaymentsApiResponse | Payment[]>('/admin/payments', {
+          params: { ...params, page: i + 2, limit: 100 },
+        })
+      )
+    );
+    rest.forEach(r => payments.push(...unwrapArray<Payment>(r, 'payments')));
+  }
+  return payments;
+}
+
+/** Fetch ALL pages of nominees */
+async function fetchAllNominees(): Promise<Nominee[]> {
+  const first = await apiClient.get<NomineesApiResponse | Nominee[]>('/admin/nominees', {
+    params: { page: 1, limit: 100 },
+  });
+  const nominees = [...unwrapArray<Nominee>(first, 'nominees')];
+  const totalPages = (first as NomineesApiResponse)?.pagination?.totalPages ?? 1;
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        apiClient.get<NomineesApiResponse | Nominee[]>('/admin/nominees', {
+          params: { page: i + 2, limit: 100 },
+        })
+      )
+    );
+    rest.forEach(r => nominees.push(...unwrapArray<Nominee>(r, 'nominees')));
+  }
+  return nominees;
+}
+
+/** Fetch ALL categories (handles both array and paginated wrapper) */
+async function fetchAllCategories(): Promise<Category[]> {
+  const first = await apiClient.get<CategoriesApiResponse | Category[]>('/admin/categories', {
+    params: { page: 1, limit: 100 },
+  });
+  const cats = [...unwrapArray<Category>(first, 'categories')];
+  const totalPages = (first as CategoriesApiResponse)?.pagination?.totalPages ?? 1;
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        apiClient.get<CategoriesApiResponse | Category[]>('/admin/categories', {
+          params: { page: i + 2, limit: 100 },
+        })
+      )
+    );
+    rest.forEach(r => cats.push(...unwrapArray<Category>(r, 'categories')));
+  }
+  return cats;
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
 export const analyticsService = {
-  /**
-   * Fetch dashboard metrics from /admin/dashboard
-   * @returns Promise with dashboard metrics data
-   */
   async getMetrics(): Promise<DashboardMetrics> {
     const data = await apiClient.get<DashboardApiResponse>('/admin/dashboard');
-    
-    // Return metrics with zero trends (we don't have historical data for trends)
     return {
-      totalNominees: data.nomineesCount || 0,
-      totalCategories: data.categoriesCount || 0,
-      totalVotes: data.totalVotes || 0,
-      totalRevenue: data.totalRevenue || 0,
+      totalNominees: data?.nomineesCount ?? 0,
+      totalCategories: data?.categoriesCount ?? 0,
+      totalVotes: data?.totalVotes ?? 0,
+      totalRevenue: data?.totalRevenue ?? 0,
       trends: {
-        nominees: { value: 0, isPositive: true },
+        nominees:   { value: 0, isPositive: true },
         categories: { value: 0, isPositive: true },
-        votes: { value: 0, isPositive: true },
-        revenue: { value: 0, isPositive: true },
+        votes:      { value: 0, isPositive: true },
+        revenue:    { value: 0, isPositive: true },
       },
     };
   },
 
-  /**
-   * Fetch voting trends by aggregating votes from /admin/votes
-   */
   async getVotingTrends(days: number = 30): Promise<VotingTrendData[]> {
     try {
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      // Fetch votes with date range
-      const response = await apiClient.get<{ votes: Vote[]; pagination: any }>('/admin/votes', {
-        params: {
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          limit: 1000,
-        },
+      const votes = await fetchAllVotes({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
       });
 
-      const votes = response.votes || [];
+      if (!votes.length) return [];
 
-      // Group votes by date
-      const votesByDate = new Map<string, number>();
-      
-      votes.forEach((vote) => {
-        const date = new Date(vote.createdAt).toISOString().split('T')[0];
-        votesByDate.set(date, (votesByDate.get(date) || 0) + vote.quantity);
+      const byDate = new Map<string, number>();
+      votes.forEach(v => {
+        const date = v.createdAt?.split('T')[0];
+        if (!date) return;
+        byDate.set(date, (byDate.get(date) ?? 0) + (v.quantity ?? 1));
       });
 
-      // Convert to array and sort by date
-      const trends: VotingTrendData[] = Array.from(votesByDate.entries())
+      return Array.from(byDate.entries())
         .map(([date, votes]) => ({ date, votes }))
         .sort((a, b) => a.date.localeCompare(b.date));
-
-      return trends;
-    } catch (error) {
-      console.error('Error fetching voting trends:', error);
+    } catch (e) {
+      console.error('getVotingTrends:', e);
       return [];
     }
   },
 
-  /**
-   * Fetch vote distribution by category from /admin/votes
-   */
   async getVotesByCategory(): Promise<VotesByCategoryData[]> {
     try {
-      // Fetch all votes
-      const response = await apiClient.get<{ votes: Vote[]; pagination: any }>('/admin/votes', {
-        params: { limit: 1000 },
+      const [votes, cats] = await Promise.all([
+        fetchAllVotes(),
+        fetchAllCategories(),
+      ]);
+
+      if (!votes.length) return [];
+
+      const catMap = new Map(cats.map(c => [c.id, c.name]));
+
+      const byCategory = new Map<string, number>();
+      votes.forEach(v => {
+        const name = catMap.get(v.categoryId) ?? 'Unknown';
+        byCategory.set(name, (byCategory.get(name) ?? 0) + (v.quantity ?? 1));
       });
 
-      const votes = response.votes || [];
-
-      // Fetch categories to get names
-      const categories = await apiClient.get<Category[]>('/admin/categories');
-      const categoryMap = new Map(categories.map(c => [c.id, c.name]));
-
-      // Group votes by category
-      const votesByCategory = new Map<string, number>();
-      
-      votes.forEach((vote) => {
-        const categoryName = categoryMap.get(vote.categoryId) || 'Unknown';
-        votesByCategory.set(categoryName, (votesByCategory.get(categoryName) || 0) + vote.quantity);
-      });
-
-      // Convert to array
-      return Array.from(votesByCategory.entries())
+      return Array.from(byCategory.entries())
         .map(([category, votes]) => ({ category, votes }))
         .sort((a, b) => b.votes - a.votes);
-    } catch (error) {
-      console.error('Error fetching votes by category:', error);
+    } catch (e) {
+      console.error('getVotesByCategory:', e);
       return [];
     }
   },
 
-  /**
-   * Fetch voting status distribution (vote types)
-   */
   async getVotingStatus(): Promise<VotingStatusData[]> {
     try {
-      const response = await apiClient.get<{ votes: Vote[]; pagination: any }>('/admin/votes', {
-        params: { limit: 1000 },
-      });
+      const votes = await fetchAllVotes();
+      if (!votes.length) return [];
 
-      const votes = response.votes || [];
-
-      // Group by vote type
-      const votesByType = new Map<string, number>();
-      
-      votes.forEach((vote) => {
-        const type = vote.type || 'STANDARD';
-        votesByType.set(type, (votesByType.get(type) || 0) + 1);
+      const byType = new Map<string, number>();
+      votes.forEach(v => {
+        const type = v.type ?? 'STANDARD';
+        byType.set(type, (byType.get(type) ?? 0) + 1);
       });
 
       const total = votes.length;
-
-      // Convert to array with percentages
-      return Array.from(votesByType.entries())
-        .map(([status, count]) => ({
-          status,
-          count,
-          percentage: total > 0 ? (count / total) * 100 : 0,
-        }));
-    } catch (error) {
-      console.error('Error fetching voting status:', error);
+      return Array.from(byType.entries()).map(([status, count]) => ({
+        status,
+        count,
+        percentage: total > 0 ? (count / total) * 100 : 0,
+      }));
+    } catch (e) {
+      console.error('getVotingStatus:', e);
       return [];
     }
   },
 
-  /**
-   * Fetch revenue trends from /admin/payments
-   */
   async getRevenueTrends(days: number = 30): Promise<RevenueTrendData[]> {
     try {
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const response = await apiClient.get<{ payments: Payment[]; pagination: any }>('/admin/payments', {
-        params: {
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          status: 'COMPLETED',
-          limit: 1000,
-        },
+      const payments = await fetchAllPayments({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
       });
 
-      const payments = response.payments || [];
+      const completed = payments.filter(p =>
+        (p.status ?? '').toUpperCase() === 'COMPLETED'
+      );
 
-      // Group payments by date
-      const revenueByDate = new Map<string, number>();
-      
-      payments.forEach((payment) => {
-        if (payment.status === 'COMPLETED') {
-          const date = new Date(payment.createdAt).toISOString().split('T')[0];
-          revenueByDate.set(date, (revenueByDate.get(date) || 0) + payment.amount);
-        }
+      if (!completed.length) return [];
+
+      const byDate = new Map<string, number>();
+      completed.forEach(p => {
+        const date = p.createdAt?.split('T')[0];
+        if (!date) return;
+        byDate.set(date, (byDate.get(date) ?? 0) + (p.amount ?? 0));
       });
 
-      // Convert to array and sort by date
-      return Array.from(revenueByDate.entries())
+      return Array.from(byDate.entries())
         .map(([date, revenue]) => ({ date, revenue }))
         .sort((a, b) => a.date.localeCompare(b.date));
-    } catch (error) {
-      console.error('Error fetching revenue trends:', error);
+    } catch (e) {
+      console.error('getRevenueTrends:', e);
       return [];
     }
   },
 
-  /**
-   * Fetch payment status distribution from /admin/payments
-   */
   async getPaymentStatus(): Promise<PaymentStatusData[]> {
     try {
-      const response = await apiClient.get<{ payments: Payment[]; pagination: any }>('/admin/payments', {
-        params: { limit: 1000 },
+      const payments = await fetchAllPayments();
+      if (!payments.length) return [];
+
+      const byStatus = new Map<string, number>();
+      payments.forEach(p => {
+        const s = (p.status ?? 'UNKNOWN').toUpperCase();
+        byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
       });
 
-      const payments = response.payments || [];
-
-      // Group by status
-      const paymentsByStatus = new Map<string, number>();
-      
-      payments.forEach((payment) => {
-        const status = payment.status;
-        paymentsByStatus.set(status, (paymentsByStatus.get(status) || 0) + 1);
-      });
-
-      // Convert to array
-      return Array.from(paymentsByStatus.entries())
-        .map(([status, count]) => ({ status, count }));
-    } catch (error) {
-      console.error('Error fetching payment status:', error);
+      return Array.from(byStatus.entries()).map(([status, count]) => ({ status, count }));
+    } catch (e) {
+      console.error('getPaymentStatus:', e);
       return [];
     }
   },
 
-  /**
-   * Fetch nominee distribution by category from /admin/categories
-   */
   async getNomineesByCategory(): Promise<NomineesByCategoryData[]> {
     try {
-      const categories = await apiClient.get<Category[]>('/admin/categories');
+      const cats = await fetchAllCategories();
+      if (!cats.length) return [];
 
-      return categories
-        .map((category) => ({
-          category: category.name,
-          count: category.nomineeCount || 0,
-        }))
-        .sort((a, b) => b.count - a.count);
-    } catch (error) {
-      console.error('Error fetching nominees by category:', error);
+      // Try nomineeCount first, then _count.nominees (Prisma style), then 0
+      const result = cats.map(c => ({
+        category: c.name,
+        count: c.nomineeCount ?? c._count?.nominees ?? 0,
+      }));
+
+      // If all counts are 0, derive from nominees list instead
+      const hasRealCounts = result.some(r => r.count > 0);
+      if (!hasRealCounts) {
+        const nominees = await fetchAllNominees();
+        const countMap = new Map<string, number>();
+        nominees.forEach(n => {
+          (n.categories ?? []).forEach(cat => {
+            countMap.set(cat.name, (countMap.get(cat.name) ?? 0) + 1);
+          });
+        });
+        return cats
+          .map(c => ({ category: c.name, count: countMap.get(c.name) ?? 0 }))
+          .sort((a, b) => b.count - a.count);
+      }
+
+      return result.sort((a, b) => b.count - a.count);
+    } catch (e) {
+      console.error('getNomineesByCategory:', e);
       return [];
     }
   },
 
-  /**
-   * Fetch nominee status distribution (active vs inactive based on votes)
-   */
   async getNomineeStatus(): Promise<NomineeStatusData[]> {
     try {
-      const nominees = await apiClient.get<Nominee[]>('/admin/nominees');
+      const nominees = await fetchAllNominees();
+      if (!nominees.length) return [];
 
-      // Categorize nominees by vote count
-      const withVotes = nominees.filter(n => n.voteCount > 0).length;
-      const withoutVotes = nominees.filter(n => n.voteCount === 0).length;
-      const total = nominees.length;
+      const withVotes    = nominees.filter(n => (n.voteCount ?? 0) > 0).length;
+      const withoutVotes = nominees.length - withVotes;
+      const total        = nominees.length;
 
       return [
         {
@@ -302,8 +370,8 @@ export const analyticsService = {
           percentage: total > 0 ? (withoutVotes / total) * 100 : 0,
         },
       ];
-    } catch (error) {
-      console.error('Error fetching nominee status:', error);
+    } catch (e) {
+      console.error('getNomineeStatus:', e);
       return [];
     }
   },

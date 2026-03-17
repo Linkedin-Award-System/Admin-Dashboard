@@ -36,26 +36,26 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary: LinkedIn Blue background, white text
+        // Primary: LinkedIn Blue background, white text (hex to avoid purging)
         primary: [
-          'bg-primary-600 text-white',
-          'hover:bg-primary-700',
-          'active:bg-primary-800',
-          'hover:shadow-lg hover:scale-[1.02]', // Hover: shadow increase, scale 1.02
+          '[background-color:#085299] [color:#ffffff]',
+          'hover:[background-color:#063d73]',
+          'active:[background-color:#04294d]',
+          'hover:shadow-lg hover:scale-[1.02]',
           'shadow-md',
-          'focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
+          'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
         ],
-        
+
         // Secondary: White background, LinkedIn Blue border and text
         secondary: [
-          'bg-white text-primary-600',
-          'border-2 border-primary-600',
-          'hover:bg-primary-50',
-          'active:bg-primary-100',
+          'bg-white [color:#085299]',
+          'border-2 [border-color:#085299]',
+          'hover:bg-blue-50',
+          'active:bg-blue-100',
           'hover:shadow-md hover:scale-[1.02]',
-          'focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
+          'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
         ],
-        
+
         // Danger: Red background, white text
         danger: [
           'bg-red-600 text-white',
@@ -65,7 +65,7 @@ export const buttonVariants = cva(
           'shadow-md',
           'focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2',
         ],
-        
+
         // Ghost: Transparent background, minimal styling
         ghost: [
           'bg-transparent text-gray-700',
@@ -74,7 +74,7 @@ export const buttonVariants = cva(
           'hover:scale-[1.02]',
           'focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2',
         ],
-        
+
         // Icon: Square button for icon-only actions
         icon: [
           'bg-transparent text-gray-700',

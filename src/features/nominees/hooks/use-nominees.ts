@@ -39,7 +39,7 @@ export const useCreateNominee = () => {
         const optimisticNominee = {
           id: `temp-${Date.now()}`,
           ...newNominee,
-          categories: newNominee.categoryIds,
+          categories: newNominee.categoryIds.map((id) => ({ id, name: id })),
           voteCount: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -52,6 +52,9 @@ export const useCreateNominee = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOMINEES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['voting'] });
       success('Nominee created', 'The nominee has been created successfully.');
     },
     onError: (err: Error, _newNominee, context) => {
@@ -72,31 +75,48 @@ export const useUpdateNominee = () => {
     mutationFn: ({ id, data }: { id: string; data: NomineeFormData }) =>
       nomineeService.update(id, data),
     onMutate: async ({ id, data }) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: NOMINEES_QUERY_KEY });
-
-      // Snapshot previous value
       const previousNominees = queryClient.getQueryData(NOMINEES_QUERY_KEY);
 
-      // Optimistically update to the new value
+      // Build proper category objects for the optimistic update
+      // by looking up existing category names from the current cache
       queryClient.setQueryData(NOMINEES_QUERY_KEY, (old: Nominee[] | undefined) => {
         if (!old) return old;
-        return old.map((nominee: Nominee) =>
-          nominee.id === id
-            ? { ...nominee, ...data, categories: data.categoryIds, updatedAt: new Date().toISOString() }
-            : nominee
-        );
+        return old.map((nominee: Nominee) => {
+          if (nominee.id !== id) return nominee;
+
+          // Preserve existing category name/id pairs where possible, add new ones as id-only
+          const existingCatMap = new Map(nominee.categories.map(c => [c.id, c.name]));
+          const updatedCategories = data.categoryIds.map(catId => ({
+            id: catId,
+            name: existingCatMap.get(catId) || catId,
+          }));
+
+          return {
+            ...nominee,
+            fullName: data.fullName,
+            linkedInProfileUrl: data.linkedInProfileUrl,
+            shortBiography: data.shortBiography,
+            organization: data.organization,
+            profileImageUrl: data.profileImageUrl ?? nominee.profileImageUrl,
+            categories: updatedCategories,
+            updatedAt: new Date().toISOString(),
+          };
+        });
       });
 
       return { previousNominees };
     },
     onSuccess: () => {
+      // Invalidate all related queries so every page reflects the update
       queryClient.invalidateQueries({ queryKey: NOMINEES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['voting'] });
       success('Nominee updated', 'The nominee has been updated successfully.');
     },
     onError: (err: Error, _variables, context) => {
-      // Rollback on error
       if (context?.previousNominees) {
         queryClient.setQueryData(NOMINEES_QUERY_KEY, context.previousNominees);
       }
@@ -129,6 +149,9 @@ export const useDeleteNominee = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOMINEES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['voting'] });
       success('Nominee deleted', 'The nominee has been deleted successfully.');
     },
     onError: (err: Error, _id, context) => {

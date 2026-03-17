@@ -1,122 +1,64 @@
 import { memo } from 'react';
 import { DollarSign } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 import { ChartSkeleton } from './ChartSkeleton';
-import { ChartError } from './ChartError';
 import { ChartEmpty } from './ChartEmpty';
 import type { RevenueTrendsChartProps } from '../types';
-import {
-  chartMargins,
-  chartDimensions,
-} from '../utils/chart-config';
 import { formatDate, formatCurrency } from '../utils/format-utils';
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-bg-secondary/90 backdrop-blur-md border border-border-light p-4 rounded-2xl shadow-xl space-y-2 ring-1 ring-black/5">
-        <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider">{label}</p>
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-          <p className="text-lg font-bold text-text-primary">
-            {formatCurrency(payload[0].value)} <span className="text-sm font-normal text-text-secondary ml-1">ETB</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-  return null;
+const Tip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#1e293b', color: '#f1f5f9',
+      padding: '10px 14px', borderRadius: 10,
+      fontSize: 12, fontWeight: 600,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}>
+      <div style={{ color: '#94a3b8', marginBottom: 4, fontSize: 11 }}>{label}</div>
+      <div style={{ color: '#34d399', fontSize: 15 }}>{formatCurrency(payload[0].value)}</div>
+    </div>
+  );
 };
 
-/**
- * RevenueTrendsChart Component
- */
-export const RevenueTrendsChart = memo(function RevenueTrendsChart({ 
-  data, 
-  isLoading = false, 
-  error = null 
+export const RevenueTrendsChart = memo(function RevenueTrendsChart({
+  data, isLoading = false, error = null,
 }: RevenueTrendsChartProps) {
-  if (isLoading) {
-    return <ChartSkeleton height={chartDimensions.height.medium} />;
-  }
+  if (isLoading) return <ChartSkeleton height={280} />;
+  if (error || !data?.length) return (
+    <ChartContainer title="Revenue Trends" icon={DollarSign} chartHeight="240px">
+      <ChartEmpty message="No revenue data available" icon={DollarSign} />
+    </ChartContainer>
+  );
 
-  if (error) {
-    return <ChartError error={error} onRetry={() => window.location.reload()} />;
-  }
-
-  if (!data || data.length === 0) {
-    return <ChartEmpty message="No revenue data available" icon={DollarSign} />;
-  }
-
-  const chartData = data.map(item => ({
-    date: formatDate(item.date),
-    displayName: formatDate(item.date),
-    revenue: item.revenue,
-    fullDate: item.date,
-  }));
+  const chartData = data.map(d => ({ date: formatDate(d.date), revenue: d.revenue }));
 
   return (
-    <ChartContainer title="Revenue Trends" icon={DollarSign}>
-      <div style={{ width: '100%', height: '300px' }}>
-        <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-          <AreaChart
-            data={chartData}
-            margin={chartMargins.withAxis}
-          >
+    <ChartContainer title="Revenue Trends" icon={DollarSign} chartHeight="240px">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 10, bottom: 0 }}>
           <defs>
-            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
             </linearGradient>
           </defs>
-          
-          <CartesianGrid
-            strokeDasharray="4 4"
-            stroke="var(--border-light)"
-            vertical={false}
-          />
-
-          <XAxis
-            dataKey="displayName"
-            tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-            axisLine={false}
-            tickLine={false}
-            dy={10}
-          />
-
-          <YAxis
-            tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={(value) => formatCurrency(value)}
-            dx={-10}
-          />
-
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }} />
-
+          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} dy={6} />
+          <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrency(v)} dx={-4} width={70} />
+          <Tooltip content={<Tip />} cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }} />
           <Area
-            type="monotone"
-            dataKey="revenue"
-            stroke="#10b981"
-            strokeWidth={3}
-            fillOpacity={1}
-            fill="url(#colorRevenue)"
-            animationBegin={300}
-            animationDuration={1500}
-            activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 3 }}
+            type="monotone" dataKey="revenue"
+            stroke="#10b981" strokeWidth={2.5}
+            fill="url(#revGrad)"
+            activeDot={{ r: 5, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>
-      </div>
     </ChartContainer>
   );
 });

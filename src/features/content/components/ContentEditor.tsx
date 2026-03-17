@@ -5,8 +5,9 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { contentSchema, validateImageUrls, type ContentSchemaType } from '../schemas/content-schema';
 import { useUpdateContent } from '../hooks/use-content';
-import { useState, useEffect, type RefObject } from 'react';
-import { Plus, Trash2, GripVertical, Save, AlertCircle, Info, Calendar, Heart, HelpCircle } from 'lucide-react';
+import { useState, useEffect, useRef, type RefObject } from 'react';
+import { Plus, Trash2, GripVertical, Save, AlertCircle, Info, Calendar, Heart, HelpCircle, Upload, ImageIcon } from 'lucide-react';
+import { uploadService } from '@/features/uploads/services/upload-service';
 
 interface ContentEditorProps {
   initialData?: ContentSchemaType;
@@ -20,11 +21,38 @@ export const ContentEditor = ({ initialData, activeSection, onSuccess, submitRef
   const [isValidatingImages, setIsValidatingImages] = useState(false);
   const updateContent = useUpdateContent();
 
+  // File picker refs for image uploads
+  const heroFileRef = useRef<HTMLInputElement>(null);
+  const sponsorFileRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const response = await uploadService.uploadImage(file, 'GENERAL');
+      setValue('hero.imageUrl', response.url);
+    } catch (err) {
+      console.error('Hero image upload failed:', err);
+    }
+  };
+
+  const handleSponsorImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const response = await uploadService.uploadImage(file, 'GENERAL');
+      setValue(`sponsors.logos.${index}.imageUrl`, response.url);
+    } catch (err) {
+      console.error('Sponsor image upload failed:', err);
+    }
+  };
+
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<ContentSchemaType>({
     resolver: zodResolver(contentSchema),
@@ -104,13 +132,32 @@ export const ContentEditor = ({ initialData, activeSection, onSuccess, submitRef
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="hero-image" className="text-xs font-black uppercase tracking-wider text-text-tertiary">Background/Feature Image URL</Label>
-                <Input
-                  id="hero-image"
-                  {...register('hero.imageUrl')}
-                  placeholder="https://images.unsplash.com/..."
-                  className="rounded-xl border-border-light focus:ring-primary-500"
+                <Label htmlFor="hero-image" className="text-xs font-black uppercase tracking-wider text-text-tertiary">Background/Feature Image</Label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={heroFileRef}
+                  className="hidden"
+                  onChange={handleHeroImageUpload}
                 />
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => heroFileRef.current?.click()}
+                    className="rounded-xl border-border-light flex items-center gap-2"
+                  >
+                    <Upload size={16} />
+                    Choose Image
+                  </Button>
+                  <Input
+                    id="hero-image"
+                    {...register('hero.imageUrl')}
+                    placeholder="Image URL (auto-filled on upload)"
+                    className="rounded-xl border-border-light focus:ring-primary-500 flex-1"
+                    readOnly
+                  />
+                </div>
                 {errors.hero?.imageUrl && (
                   <p className="text-xs font-bold text-red-500 flex items-center gap-1">
                     <AlertCircle size={12} /> {errors.hero.imageUrl.message}
@@ -287,9 +334,33 @@ export const ContentEditor = ({ initialData, activeSection, onSuccess, submitRef
                       <Label className="text-[10px] font-black uppercase tracking-wider text-text-tertiary">Organization Name</Label>
                       <Input {...register(`sponsors.logos.${index}.name`)} placeholder="Company Name" className="rounded-lg h-9 text-xs" />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-text-tertiary">Logo URL</Label>
-                      <Input {...register(`sponsors.logos.${index}.imageUrl`)} placeholder="https://..." className="rounded-lg h-9 text-xs" />
+                  <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-text-tertiary">Logo Image</Label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={el => { sponsorFileRefs.current[index] = el; }}
+                        className="hidden"
+                        onChange={(e) => handleSponsorImageUpload(e, index)}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => sponsorFileRefs.current[index]?.click()}
+                          className="rounded-lg h-9 flex items-center gap-1.5 text-xs shrink-0"
+                        >
+                          <ImageIcon size={13} />
+                          Upload
+                        </Button>
+                        <Input
+                          {...register(`sponsors.logos.${index}.imageUrl`)}
+                          placeholder="URL (auto-filled)"
+                          className="rounded-lg h-9 text-xs flex-1"
+                          readOnly
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-black uppercase tracking-wider text-text-tertiary">Website Link (Optional)</Label>

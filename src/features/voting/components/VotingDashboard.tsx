@@ -1,18 +1,17 @@
 import { useMemo } from 'react';
-import { useVoteStats, useUniqueVoterCount } from '../hooks/use-voting';
+import { useVoteStats } from '../hooks/use-voting';
 import { Button } from '@/shared/components/ui/button';
 import { ExportButton } from '@/features/exports/components/ExportButton';
 import { exportService } from '@/features/exports/services/export-service';
 import { VotingDashboardSkeleton } from './VotingDashboardSkeleton';
 import type { DateRange } from '../types';
-import { 
-  BarChart3, 
-  Users2, 
-  Layers, 
-  Trophy, 
+import {
+  Trophy,
   ChevronRight,
   TrendingUp,
-  Target
+  Target,
+  Medal,
+  AlertCircle,
 } from 'lucide-react';
 import { formatNumber } from '@/features/dashboard/utils/format-utils';
 
@@ -21,141 +20,136 @@ interface VotingDashboardProps {
 }
 
 export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
-  const { data: voteStats, isLoading: isLoadingStats, error: statsError } = useVoteStats(dateRange);
-  const { data: uniqueVoters, isLoading: isLoadingVoters, error: votersError } = useUniqueVoterCount();
+  const { data: voteStats, isLoading, error } = useVoteStats(dateRange);
 
   const totalVotes = useMemo(
     () => voteStats?.reduce((sum, stat) => sum + stat.totalVotes, 0) || 0,
     [voteStats]
   );
 
-  const leadingNominees = useMemo(
-    () => voteStats?.map(stat => stat.leadingNominee) || [],
+  // Sort categories by total votes descending for the leaderboard
+  const sortedStats = useMemo(
+    () => [...(voteStats ?? [])].sort((a, b) => b.totalVotes - a.totalVotes),
     [voteStats]
   );
 
-  if (isLoadingStats || isLoadingVoters) {
-    return <VotingDashboardSkeleton />;
-  }
+  if (isLoading) return <VotingDashboardSkeleton />;
 
-  if (statsError || votersError) {
+  if (error) {
     return (
-      <div className="p-12 rounded-[2rem] border border-red-100 bg-red-50/50 backdrop-blur-sm text-center">
-        <TrendingUp size={48} className="mx-auto text-red-600 mb-4 opacity-50" />
-        <h3 className="text-xl font-bold text-red-800">Analytics Connection Refused</h3>
-        <p className="text-red-600 mt-2 max-w-md mx-auto">
-          We couldn't synchronize the real-time voting data.
-        </p>
-        <Button variant="outline" className="mt-6 border-red-200 text-red-700 hover:bg-red-100" onClick={() => window.location.reload()}>
-          Re-establish Connection
+      <div className="p-12 rounded-[2rem] border border-red-100 bg-red-50/50 text-center">
+        <AlertCircle size={48} className="mx-auto text-red-400 mb-4" />
+        <h3 className="text-lg font-semibold text-red-800">Could not load voting data</h3>
+        <p className="text-red-500 mt-1 text-sm">Check your connection and try refreshing.</p>
+        <Button variant="outline" className="mt-5 border-red-200 text-red-700 hover:bg-red-50" onClick={() => window.location.reload()}>
+          Retry
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
-      {/* Metrics Row */}
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-        {[
-          { 
-            label: 'Total Votes Cast', 
-            value: formatNumber(totalVotes), 
-            icon: BarChart3, 
-            color: 'text-blue-600', 
-            bg: 'bg-blue-50',
-            trend: '+12.5% this week'
-          },
-          { 
-            label: 'Unique Voters', 
-            value: formatNumber(uniqueVoters || 0), 
-            icon: Users2, 
-            color: 'text-purple-600', 
-            bg: 'bg-purple-50',
-            trend: 'Direct participation'
-          },
-          { 
-            label: 'Active Categories', 
-            value: voteStats?.length || 0, 
-            icon: Layers, 
-            color: 'text-green-600', 
-            bg: 'bg-green-50',
-            trend: 'Full coverage'
-          }
-        ].map((item, i) => (
-          <div key={i} className="bg-white p-8 rounded-[2rem] border border-border-light shadow-sm hover:shadow-premium transition-all duration-300 group">
-            <div className="flex items-center justify-between mb-4">
-              <span className={`p-4 ${item.bg} ${item.color} rounded-2xl group-hover:scale-110 transition-transform`}>
-                <item.icon size={24} />
-              </span>
-              <span className="text-xs font-medium text-gray-400">{item.trend}</span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">{item.label}</h3>
-            <div className="text-3xl font-semibold text-gray-900">{item.value}</div>
+    <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-8 py-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+            <Trophy size={20} className="text-yellow-500" />
           </div>
-        ))}
-      </div>
-
-      {/* Leading Nominees Board */}
-      <div className="bg-white rounded-[2.5rem] border border-border-light shadow-premium overflow-hidden">
-        <div className="p-8 border-b border-border-light flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-3">
-              <Trophy className="text-yellow-500" size={28} />
-              Leading Nominees
-            </h3>
-            <p className="text-sm font-normal text-gray-500 mt-1">Real-time category front-runners</p>
+            <h3 className="text-base font-semibold text-gray-900">Leading Nominees</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {sortedStats.length} categories · {formatNumber(totalVotes)} total votes
+            </p>
           </div>
-          
-          <ExportButton
-            onExport={(format) => exportService.exportVoteStats(format, dateRange)}
-            filename={`vote-stats${dateRange ? `-${dateRange.startDate}` : ''}`}
-            label="Download Full Audit"
-            className="rounded-xl h-11 px-6 border-border-light hover:bg-bg-tertiary transition-all"
-          />
         </div>
 
-        <div className="p-2">
-          {leadingNominees.length === 0 ? (
-            <div className="py-20 text-center">
-              <div className="w-16 h-16 bg-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="text-text-tertiary" size={32} />
-              </div>
-              <p className="text-text-tertiary font-bold">Waiting for the first votes to be cast...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 divide-y divide-border-light/50">
-              {voteStats?.map((stat, index) => (
-                <div 
-                  key={stat.categoryId} 
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-6 hover:bg-bg-tertiary/30 transition-colors rounded-2xl mx-2"
-                >
-                  <div className="flex items-center gap-5">
-                    <div className="w-10 h-10 rounded-full bg-bg-tertiary flex items-center justify-center text-text-tertiary font-black text-xs shrink-0 group-hover:bg-primary-50 group-hover:text-primary-600 transition-colors">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{stat.categoryName}</p>
-                      <h4 className="text-lg font-semibold text-gray-900 mt-0.5 group-hover:translate-x-1 transition-transform">{stat.leadingNominee.name}</h4>
-                    </div>
+        <ExportButton
+          onExport={(format) => exportService.exportVoteStats(format, voteStats ?? [])}
+          filename={`vote-stats${dateRange ? `-${dateRange.startDate}-${dateRange.endDate}` : ''}`}
+          label="Export Results"
+          className="rounded-xl h-10 px-5 text-sm border-gray-200 hover:bg-gray-50 transition-all"
+        />
+      </div>
+
+      {/* Body */}
+      {sortedStats.length === 0 ? (
+        <div className="py-20 text-center">
+          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Target className="text-gray-300" size={32} />
+          </div>
+          <p className="text-gray-400 font-medium">No votes recorded yet</p>
+          <p className="text-gray-300 text-sm mt-1">Results will appear once voting begins</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {sortedStats.map((stat, index) => {
+            const rankColors = ['text-yellow-500', 'text-gray-400', 'text-amber-600'];
+            const rankBg = ['bg-yellow-50', 'bg-gray-50', 'bg-amber-50'];
+            const isTop3 = index < 3;
+
+            return (
+              <div
+                key={stat.categoryId}
+                className="group flex flex-col sm:flex-row sm:items-center justify-between px-8 py-5 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                onClick={() => window.location.assign(`/nominees?category=${stat.categoryId}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') window.location.assign(`/nominees?category=${stat.categoryId}`); }}
+              >
+                {/* Left: rank + category + nominee */}
+                <div className="flex items-center gap-4">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-semibold text-sm ${isTop3 ? rankBg[index] + ' ' + rankColors[index] : 'bg-gray-50 text-gray-400'}`}>
+                    {isTop3 ? <Medal size={16} /> : index + 1}
                   </div>
-                  
-                  <div className="mt-4 sm:mt-0 flex items-center gap-6">
-                    <div className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="text-xl font-semibold text-primary-600">{formatNumber(stat.leadingNominee.voteCount)}</span>
-                        <TrendingUp size={16} className="text-green-500" />
-                      </div>
-                      <p className="text-xs font-normal text-gray-400 mt-0.5">Verified Votes</p>
-                    </div>
-                    <ChevronRight className="text-text-tertiary group-hover:text-primary-600 group-hover:translate-x-1 transition-all" size={20} />
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{stat.categoryName}</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-0.5 group-hover:text-blue-700 transition-colors">
+                      {stat.leadingNominee.name || 'No nominees yet'}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Right: vote count + category total + arrow */}
+                <div className="mt-3 sm:mt-0 flex items-center gap-6">
+                  <div className="text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-lg font-semibold text-blue-700">
+                        {formatNumber(stat.leadingNominee.voteCount)}
+                      </span>
+                      <TrendingUp size={14} className="text-green-500" />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      of {formatNumber(stat.totalVotes)} in category
+                    </p>
+                  </div>
+
+                  {/* Mini progress bar */}
+                  <div className="hidden sm:block w-24">
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                        style={{
+                          width: stat.totalVotes > 0
+                            ? `${Math.min(100, (stat.leadingNominee.voteCount / stat.totalVotes) * 100)}%`
+                            : '0%'
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 text-right">
+                      {stat.totalVotes > 0
+                        ? `${((stat.leadingNominee.voteCount / stat.totalVotes) * 100).toFixed(0)}%`
+                        : '0%'}
+                    </p>
+                  </div>
+
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 };

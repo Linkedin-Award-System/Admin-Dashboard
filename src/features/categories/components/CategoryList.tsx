@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useCategories } from '../hooks/use-categories';
 import { Input } from '@/shared/components/ui/input';
-import { Button, Card, PageHeader } from '@/shared/design-system';
-import { Badge } from '@/shared/components/ui/badge';
-import { Pencil, Trash2, Plus, FolderOpen, Search, Filter } from 'lucide-react';
+import { Button, PageHeader } from '@/shared/design-system';
+import { Pencil, Trash2, Plus, FolderOpen, Search, Users, Tag, TrendingUp } from 'lucide-react';
 import { ExportButton } from '@/features/exports/components/ExportButton';
 import { exportService } from '@/features/exports/services/export-service';
 import { CategoryListSkeleton } from './CategoryListSkeleton';
@@ -15,43 +14,72 @@ interface CategoryListProps {
   onCreate?: () => void;
 }
 
+// Deterministic color palette for category icons
+const GRADIENT_PALETTES = [
+  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', text: '#7c3a1e' },
+  { bg: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', text: '#1a3a5c' },
+  { bg: 'linear-gradient(135deg, #fd7043 0%, #ff8a65 100%)', text: '#fff' },
+  { bg: 'linear-gradient(135deg, #26c6da 0%, #00acc1 100%)', text: '#fff' },
+];
+
+function getPalette(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return GRADIENT_PALETTES[Math.abs(hash) % GRADIENT_PALETTES.length];
+}
+
 export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) => {
   const { data: categories, isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 18;
 
-  const filteredAndSortedCategories = useMemo(() => {
+  const filteredCategories = useMemo(() => {
     if (!categories) return [];
-
     let filtered = categories;
-
     if (searchTerm) {
+      const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (category) =>
-          category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          category.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
       );
     }
-
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, searchTerm]);
 
-  if (isLoading) {
-    return <CategoryListSkeleton />;
-  }
+  const totalNominees = useMemo(
+    () => (categories ?? []).reduce((sum, c) => sum + (c.nomineeCount ?? 0), 0),
+    [categories]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
+  const paginatedCategories = filteredCategories.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  if (isLoading) return <CategoryListSkeleton />;
 
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center bg-white/50 backdrop-blur-md p-6 rounded-3xl border border-border-light shadow-sm">
-          <h2 className="text-2xl font-semibold text-gray-900">Categories</h2>
-        </div>
-        <div className="p-8 rounded-3xl border border-red-100 bg-red-50/50 backdrop-blur-sm text-center">
-          <h3 className="text-xl font-semibold text-red-800">Error Loading Categories</h3>
-          <p className="text-red-600 mt-2 max-w-md mx-auto">
+        <div style={{ padding: '2rem', borderRadius: '1.5rem', background: '#fef2f2', border: '1px solid #fecaca', textAlign: 'center' }}>
+          <h3 style={{ color: '#991b1b', fontWeight: 700, fontSize: '1.125rem' }}>Error Loading Categories</h3>
+          <p style={{ color: '#dc2626', marginTop: '0.5rem' }}>
             {error instanceof Error ? error.message : 'An error occurred while loading categories'}
           </p>
-          <Button variant="secondary" className="mt-6 border-red-200 text-red-700 hover:bg-red-100" onClick={() => window.location.reload()}>
-            Retry Loading
+          <Button variant="secondary" onClick={() => window.location.reload()} style={{ marginTop: '1rem' }}>
+            Retry
           </Button>
         </div>
       </div>
@@ -59,22 +87,26 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header Section - Using PageHeader component */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Header */}
       <PageHeader
         title="Categories"
         subtitle="Manage and organize your award categories"
         actions={
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <ExportButton
-              onExport={exportService.exportCategories}
+              onExport={(format) => exportService.exportCategories(format, categories ?? [])}
               filename="categories"
-              label="Export Data"
+              label="Export"
               className="rounded-2xl border-border-light hover:bg-bg-tertiary font-semibold"
             />
             {onCreate && (
-              <Button onClick={onCreate} variant="primary" style={{ backgroundColor: '#085299', color: '#ffffff' }} className="rounded-2xl shadow-lg shadow-primary-500/20 px-6 h-12 font-medium transition-all hover:scale-[1.02] active:scale-[0.98]">
-                <Plus className="mr-2 h-5 w-5 stroke-[3px]" />
+              <Button
+                onClick={onCreate}
+                variant="primary"
+                style={{ backgroundColor: '#085299', color: '#ffffff', borderRadius: '0.75rem', padding: '0 1.25rem', height: '2.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus size={18} strokeWidth={2.5} />
                 New Category
               </Button>
             )}
@@ -82,99 +114,224 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
         }
       />
 
-      {/* Filters Section */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary group-focus-within:text-primary-500 transition-colors" size={20} />
-          <Input
-            type="search"
-            placeholder="Search categories..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 h-14 rounded-2xl border-border-light bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm font-medium"
-          />
-        </div>
-        <Button variant="ghost" className="h-14 w-14 rounded-2xl border border-border-light hover:bg-bg-tertiary group">
-          <Filter size={22} className="text-text-tertiary group-hover:text-text-primary transition-colors" strokeWidth={2.5} />
-        </Button>
-      </div>
-
-      {/* Content Section */}
-      {filteredAndSortedCategories.length === 0 ? (
-        <div className="py-20 text-center bg-white/50 backdrop-blur-md rounded-[2.5rem] border border-border-light border-dashed">
-          <div className="w-20 h-20 bg-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
-            <FolderOpen className="text-text-tertiary" size={40} />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900">No Categories Found</h3>
-          <p className="text-text-tertiary mt-2">
-            {searchTerm
-              ? `No categories match "${searchTerm}"`
-              : 'Start building your dashboard by adding your first category.'}
-          </p>
-          {searchTerm && (
-            <Button variant="ghost" onClick={() => setSearchTerm('')} className="mt-2 text-primary-600 font-medium underline-offset-4">
-              Clear search filter
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          {filteredAndSortedCategories.map((category, index) => (
-            <Card
-              key={category.id}
-              hoverable
-              className="group relative animate-in fade-in slide-in-from-bottom-4"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {/* Category Icon/Initial */}
-              <div className="flex items-start justify-between mb-6">
-                <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 font-semibold text-2xl shadow-inner group-hover:scale-110 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
-                  {category.name.charAt(0)}
-                </div>
-                <Badge variant="secondary" className="bg-bg-tertiary/50 text-text-secondary font-medium px-3 py-1 rounded-full border-none ring-1 ring-inset ring-black/5 group-hover:bg-primary-50 group-hover:text-primary-700 transition-colors">
-                  {category.nomineeCount} Nominees
-                </Badge>
+      {/* Stats Strip */}
+      {categories && categories.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+          {[
+            { icon: Tag, label: 'Total Categories', value: categories.length, color: '#085299', bg: '#eff6ff' },
+            { icon: Users, label: 'Total Nominees', value: totalNominees, color: '#7c3aed', bg: '#f5f3ff' },
+            { icon: TrendingUp, label: 'Avg per Category', value: categories.length ? Math.round(totalNominees / categories.length) : 0, color: '#059669', bg: '#ecfdf5' },
+          ].map(({ icon: Icon, label, value, color, bg }) => (
+            <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '1rem', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={20} style={{ color }} />
               </div>
-
-              {/* Title & Description */}
-              <div className="space-y-2 mb-8">
-                <h3 className="text-base font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
-                  {category.name}
-                </h3>
-                <p className="text-sm text-text-tertiary line-clamp-3 leading-relaxed">
-                  {category.description}
-                </p>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', fontWeight: 500 }}>{label}</div>
               </div>
-
-              {/* Actions Overlay */}
-              <div className="flex items-center justify-end gap-2 pt-6 border-t border-border-light/50">
-                {onEdit && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onEdit(category)}
-                    className="h-12 w-12 rounded-xl transition-all group/edit shadow-sm"
-                    title="Edit category"
-                  >
-                    <Pencil size={22} className="transition-transform group-hover/edit:scale-110" strokeWidth={2.5} />
-                  </Button>
-                )}
-                {onDelete && (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => onDelete(category)}
-                    className="h-12 w-12 rounded-xl transition-all group/delete shadow-sm"
-                    title="Delete category"
-                  >
-                    <Trash2 size={22} className="transition-transform group-hover/delete:scale-110" strokeWidth={2.5} />
-                  </Button>
-                )}
-              </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
+
+      {/* Search Bar */}
+      <div style={{ position: 'relative' }}>
+        <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+        <Input
+          type="search"
+          placeholder="Search categories by name or description..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          style={{ paddingLeft: '2.75rem', height: '3rem', borderRadius: '0.75rem', border: '1px solid #e5e7eb', fontSize: '0.875rem', width: '100%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
+        />
+      </div>
+
+      {/* Grid or Empty State */}
+      {filteredCategories.length === 0 ? (
+        <div style={{ padding: '5rem 2rem', textAlign: 'center', background: '#fff', borderRadius: '1.5rem', border: '2px dashed #e5e7eb' }}>
+          <div style={{ width: '5rem', height: '5rem', background: '#f3f4f6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+            <FolderOpen size={36} style={{ color: '#9ca3af' }} />
+          </div>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827' }}>No Categories Found</h3>
+          <p style={{ color: '#6b7280', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+            {searchTerm ? `No categories match "${searchTerm}"` : 'Add your first category to get started.'}
+          </p>
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} style={{ marginTop: '0.75rem', color: '#085299', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}>
+              Clear search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+          {paginatedCategories.map((category) => {
+            const palette = getPalette(category.name);
+            return (
+              <CategoryCard
+                key={category.id}
+                category={category}
+                palette={palette}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+          <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 500 }}>
+            Page {currentPage} of {totalPages} &middot; {filteredCategories.length} categories
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button variant="secondary" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} style={{ borderRadius: '0.5rem' }}>
+              Previous
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{ borderRadius: '0.5rem' }}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Category Card ────────────────────────────────────────────────────────────
+
+interface CardProps {
+  category: Category;
+  palette: { bg: string; text: string };
+  onEdit?: (c: Category) => void;
+  onDelete?: (c: Category) => void;
+}
+
+const CategoryCard = ({ category, palette, onEdit, onDelete }: CardProps) => {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: '#fff',
+        border: `1px solid ${hovered ? '#085299' : '#e5e7eb'}`,
+        borderRadius: '1.25rem',
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        boxShadow: hovered ? '0 8px 24px rgba(8,82,153,0.12)' : '0 1px 3px rgba(0,0,0,0.06)',
+        transition: 'all 0.2s ease',
+        cursor: 'default',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Top row: icon + nominee badge */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            width: '3.5rem',
+            height: '3.5rem',
+            borderRadius: '1rem',
+            background: palette.bg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.375rem',
+            fontWeight: 800,
+            color: palette.text,
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            transform: hovered ? 'scale(1.08)' : 'scale(1)',
+            transition: 'transform 0.2s ease',
+          }}
+        >
+          {category.name.charAt(0).toUpperCase()}
+        </div>
+        <div
+          style={{
+            background: '#eff6ff',
+            color: '#085299',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            padding: '0.3rem 0.75rem',
+            borderRadius: '999px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            border: '1px solid #bfdbfe',
+          }}
+        >
+          <Users size={12} />
+          {category.nomineeCount ?? 0} nominees
+        </div>
+      </div>
+
+      {/* Name & description */}
+      <div style={{ flex: 1 }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: '0.375rem', lineHeight: 1.3 }}>
+          {category.name}
+        </h3>
+        <p style={{ fontSize: '0.8125rem', color: '#6b7280', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {category.description || 'No description provided.'}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
+        {onEdit && (
+          <button
+            onClick={() => onEdit(category)}
+            title="Edit category"
+            style={{
+              flex: 1,
+              height: '2.25rem',
+              borderRadius: '0.625rem',
+              border: '1px solid #e5e7eb',
+              background: hovered ? '#f0f7ff' : '#f9fafb',
+              color: '#085299',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.375rem',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Pencil size={14} strokeWidth={2.5} />
+            Edit
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={() => onDelete(category)}
+            title="Delete category"
+            style={{
+              width: '2.25rem',
+              height: '2.25rem',
+              borderRadius: '0.625rem',
+              border: '1px solid #fee2e2',
+              background: '#fff5f5',
+              color: '#dc2626',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+              flexShrink: 0,
+            }}
+          >
+            <Trash2 size={14} strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

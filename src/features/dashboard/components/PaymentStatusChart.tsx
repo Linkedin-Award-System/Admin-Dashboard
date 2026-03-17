@@ -1,124 +1,62 @@
 import { memo } from 'react';
 import { CreditCard } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 import { ChartSkeleton } from './ChartSkeleton';
-import { ChartError } from './ChartError';
 import { ChartEmpty } from './ChartEmpty';
 import type { PaymentStatusChartProps } from '../types';
-import {
-  chartMargins,
-  chartDimensions,
-} from '../utils/chart-config';
 import { formatNumber } from '../utils/format-utils';
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-bg-secondary/90 backdrop-blur-md border border-border-light p-4 rounded-2xl shadow-xl space-y-2 ring-1 ring-black/5">
-        <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider">{label}</p>
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.2)]" 
-            style={{ backgroundColor: payload[0].payload.fill }} 
-          />
-          <p className="text-lg font-bold text-text-primary">
-            {formatNumber(payload[0].value)} <span className="text-sm font-normal text-text-secondary ml-1">Payments</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-  return null;
+const STATUS_COLORS: Record<string, string> = {
+  COMPLETED: '#10b981',
+  PENDING:   '#f59e0b',
+  FAILED:    '#ef4444',
+  REFUNDED:  '#6b7280',
 };
 
-/**
- * PaymentStatusChart Component
- */
-export const PaymentStatusChart = memo(function PaymentStatusChart({ 
-  data, 
-  isLoading = false, 
-  error = null 
+const Tip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#1e293b', color: '#f1f5f9',
+      padding: '10px 14px', borderRadius: 10,
+      fontSize: 12, fontWeight: 600,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}>
+      <div style={{ color: '#94a3b8', marginBottom: 4, fontSize: 11 }}>{label}</div>
+      <div style={{ color: '#fff', fontSize: 15 }}>{formatNumber(payload[0].value)} payments</div>
+    </div>
+  );
+};
+
+export const PaymentStatusChart = memo(function PaymentStatusChart({
+  data, isLoading = false, error = null,
 }: PaymentStatusChartProps) {
-  if (isLoading) {
-    return <ChartSkeleton height={chartDimensions.height.small} />;
-  }
-
-  if (error) {
-    return <ChartError error={error} onRetry={() => window.location.reload()} />;
-  }
-
-  if (!data || data.length === 0) {
-    return <ChartEmpty message="No payment data available" icon={CreditCard} />;
-  }
-
-  const COLORS: Record<string, string> = {
-    successful: '#10b981',
-    pending: '#f59e0b',
-    failed: '#ef4444',
-  };
-
-  const chartData = data.map(item => ({
-    ...item,
-    fill: COLORS[item.status.toLowerCase()] || '#6b7280',
-  }));
+  if (isLoading) return <ChartSkeleton height={200} />;
+  if (error || !data?.length) return (
+    <ChartContainer title="Payment Status" icon={CreditCard} chartHeight="240px">
+      <ChartEmpty message="No payment data available" icon={CreditCard} />
+    </ChartContainer>
+  );
 
   return (
-    <ChartContainer title="Payment Status" icon={CreditCard}>
-      <div style={{ width: '100%', height: '200px' }}>
-        <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-          <BarChart
-            data={chartData}
-            margin={chartMargins.withAxis}
-            layout="vertical"
-            barSize={32}
-          >
-          <CartesianGrid
-            strokeDasharray="4 4"
-            stroke="var(--border-light)"
-            horizontal={false}
-          />
-
-          <XAxis
-            type="number"
-            tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={(value) => formatNumber(value)}
-          />
-
-          <YAxis
-            type="category"
-            dataKey="status"
-            tick={{ fill: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
-            axisLine={false}
-            tickLine={false}
-            width={100}
-          />
-
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--primary-500)', opacity: 0.05 }} />
-
-          <Bar
-            dataKey="count"
-            radius={[0, 4, 4, 0]}
-            animationDuration={1500}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
+    <ChartContainer title="Payment Status" icon={CreditCard} chartHeight="240px">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 4 }} barSize={22}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+          <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatNumber} />
+          <YAxis type="category" dataKey="status" tick={{ fill: '#374151', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} width={90} />
+          <Tooltip content={<Tip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+          <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={STATUS_COLORS[entry.status] ?? '#6b7280'} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-      </div>
     </ChartContainer>
   );
 });

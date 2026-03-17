@@ -40,7 +40,14 @@ export const uploadService = {
     }
 
     const data = await response.json();
-    return data.data;
+    const result: UploadResponse = data.data;
+
+    // Ensure the URL is absolute so browsers can load it directly
+    if (result.url && !result.url.startsWith('http')) {
+      result.url = `${import.meta.env.VITE_API_BASE_URL}${result.url.startsWith('/') ? '' : '/'}${result.url}`;
+    }
+
+    return result;
   },
 
   /**

@@ -11,13 +11,14 @@ export const nomineeSchema = z.object({
     }),
   organization: z
     .string()
-    .min(1, 'Organization is required')
-    .max(200, 'Organization must be at most 200 characters'),
+    .max(200, 'Organization must be at most 200 characters')
+    .optional()
+    .or(z.literal('')),
   shortBiography: z
     .string()
     .min(1, 'Biography is required')
     .max(1000, 'Biography must be at most 1000 characters'),
-  profileImageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  profileImageUrl: z.string().optional().or(z.literal('')),
   categoryIds: z.array(z.string()).min(1, 'At least one category must be selected'),
 });
 

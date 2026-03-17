@@ -14,37 +14,32 @@ export function formatNumber(value: number): string {
 
 /**
  * Format a number as currency
- * @example formatCurrency(1234.56, 'USD') => "$1,234.56"
- * @example formatCurrency(1234.56, 'ETB') => "ETB 1,234.56"
+ * @example formatCurrency(1234.56) => "ETB 1,234.56"
  */
-export function formatCurrency(value: number, currency: string = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
+export function formatCurrency(value: number, currency: string = 'ETB'): string {
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+  return currency + ' ' + formatted;
 }
 
 /**
- * Format a number as a compact currency (e.g., $1.2K, $3.4M)
- * @example formatCompactCurrency(1234, 'USD') => "$1.2K"
+ * Format a number as a compact currency (e.g., ETB 1.2K, ETB 3.4M)
+ * @example formatCompactCurrency(1234) => "ETB 1.2K"
  */
-export function formatCompactCurrency(value: number, currency: string = 'USD'): string {
+export function formatCompactCurrency(value: number, currency: string = 'ETB'): string {
   let formattedValue = '';
   if (value >= 1000000000) {
-    formattedValue = `${(value / 1000000000).toFixed(1)}B`;
+    formattedValue = (value / 1000000000).toFixed(1) + 'B';
   } else if (value >= 1000000) {
-    formattedValue = `${(value / 1000000).toFixed(1)}M`;
+    formattedValue = (value / 1000000).toFixed(1) + 'M';
   } else if (value >= 1000) {
-    formattedValue = `${(value / 1000).toFixed(1)}K`;
+    formattedValue = (value / 1000).toFixed(1) + 'K';
   } else {
     return formatCurrency(value, currency);
   }
-
-  // Simple prefixing for USD, otherwise suffixing or standard formatting
-  if (currency === 'USD') return `$${formattedValue}`;
-  return `${currency} ${formattedValue}`;
+  return currency + ' ' + formattedValue;
 }
 
 /**
@@ -54,7 +49,7 @@ export function formatCompactCurrency(value: number, currency: string = 'USD'): 
  */
 export function formatPercentage(value: number, isDecimal: boolean = true): string {
   const percentage = isDecimal ? value * 100 : value;
-  return `${percentage.toFixed(2)}%`;
+  return percentage.toFixed(2) + '%';
 }
 
 /**
@@ -63,7 +58,7 @@ export function formatPercentage(value: number, isDecimal: boolean = true): stri
  */
 export function formatCompactPercentage(value: number, isDecimal: boolean = true): string {
   const percentage = isDecimal ? value * 100 : value;
-  return `${Math.round(percentage)}%`;
+  return Math.round(percentage) + '%';
 }
 
 /**
@@ -112,33 +107,33 @@ export function formatRelativeTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) {
     return 'just now';
   }
-  
+
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
-    return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    return diffInMinutes + ' ' + (diffInMinutes === 1 ? 'minute' : 'minutes') + ' ago';
   }
-  
+
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
-    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    return diffInHours + ' ' + (diffInHours === 1 ? 'hour' : 'hours') + ' ago';
   }
-  
+
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 30) {
-    return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+    return diffInDays + ' ' + (diffInDays === 1 ? 'day' : 'days') + ' ago';
   }
-  
+
   const diffInMonths = Math.floor(diffInDays / 30);
   if (diffInMonths < 12) {
-    return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
+    return diffInMonths + ' ' + (diffInMonths === 1 ? 'month' : 'months') + ' ago';
   }
-  
+
   const diffInYears = Math.floor(diffInMonths / 12);
-  return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
+  return diffInYears + ' ' + (diffInYears === 1 ? 'year' : 'years') + ' ago';
 }
 
 /**
@@ -148,7 +143,7 @@ export function formatRelativeTime(date: Date | string): string {
  */
 export function formatTrend(value: number, isPositive: boolean): string {
   const sign = isPositive ? '+' : '';
-  return `${sign}${value.toFixed(1)}%`;
+  return sign + value.toFixed(1) + '%';
 }
 
 /**
@@ -158,13 +153,13 @@ export function formatTrend(value: number, isPositive: boolean): string {
  */
 export function abbreviateNumber(value: number): string {
   if (value >= 1000000000) {
-    return `${(value / 1000000000).toFixed(1)}B`;
+    return (value / 1000000000).toFixed(1) + 'B';
   }
   if (value >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`;
+    return (value / 1000000).toFixed(1) + 'M';
   }
   if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
+    return (value / 1000).toFixed(1) + 'K';
   }
   return value.toString();
 }

@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Bell, Shield, Palette, Globe, Eye, EyeOff, Check, Camera } from 'lucide-react';
+import { X, User, Bell, Shield, Palette, Globe, Eye, EyeOff, Check, Camera, Coins } from 'lucide-react';
+import { useTheme } from '@/shared/hooks/use-theme';
+import type { ThemeMode } from '@/shared/hooks/use-theme';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'language';
+type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'language' | 'credits';
 
 interface NavItem {
   id: PanelId;
@@ -24,6 +26,7 @@ const NAV: NavItem[] = [
   { id: 'security',      icon: Shield,  label: 'Security',      accent: 'border-red-500',     iconBg: 'bg-red-500',     iconColor: 'text-white' },
   { id: 'appearance',    icon: Palette, label: 'Appearance',    accent: 'border-purple-500',  iconBg: 'bg-purple-600',  iconColor: 'text-white' },
   { id: 'language',      icon: Globe,   label: 'Language',      accent: 'border-emerald-500', iconBg: 'bg-emerald-600', iconColor: 'text-white' },
+  { id: 'credits',       icon: Coins,   label: 'Credits',       accent: 'border-yellow-500',  iconBg: 'bg-yellow-500',  iconColor: 'text-white' },
 ];
 
 function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
@@ -40,14 +43,18 @@ function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [active, setActive] = useState<PanelId>('profile');
   const [showPw, setShowPw] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
+  const { theme, setTheme } = useTheme();
   const [language, setLanguage] = useState('en');
   const [timezone, setTimezone] = useState('UTC');
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifPush, setNotifPush] = useState(true);
   const [notifSms, setNotifSms] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Credits state
+  const [freeVotePoints, setFreeVotePoints] = useState('10');
+  const [premiumVotePoints, setPremiumVotePoints] = useState('50');
+  const [basicPackagePrice, setBasicPackagePrice] = useState('9.99');
+  const [premiumPackagePrice, setPremiumPackagePrice] = useState('29.99');
 
   if (!isOpen) return null;
 
@@ -67,6 +74,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     security: 'Manage password and account security',
     appearance: 'Customize the look of your dashboard',
     language: 'Set your language and regional preferences',
+    credits: 'Configure credit points and package pricing',
   };
 
   const profilePanel = (
@@ -175,17 +183,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
       </div>
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">Two-Factor Authentication</p>
-      <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 bg-white hover:border-gray-200 transition-all">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-            <Shield size={16} className="text-red-600" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800">Authenticator App</p>
-            <p className="text-xs text-gray-500 mt-0.5">Google Authenticator or similar</p>
-          </div>
+      <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border-2 border-gray-100">
+        <div className="w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
+          <Shield size={16} className="text-gray-500" />
         </div>
-        <Toggle value={twoFactor} onChange={() => setTwoFactor(v => !v)} />
+        <div>
+          <p className="text-sm font-bold text-gray-700">Two-Factor Authentication</p>
+          <p className="text-xs text-gray-400 mt-0.5">Contact your system administrator to enable 2FA</p>
+        </div>
       </div>
     </div>
   );
@@ -196,10 +201,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Theme</p>
         <div className="grid grid-cols-3 gap-3">
           {([
-            { value: 'light',  label: 'Light',  preview: 'bg-white',                          border: 'border-gray-200' },
-            { value: 'dark',   label: 'Dark',   preview: 'bg-gradient-to-br from-gray-800 to-gray-900', border: 'border-gray-400' },
-            { value: 'system', label: 'System', preview: 'bg-gradient-to-br from-white to-gray-800',    border: 'border-gray-400' },
-          ] as const).map(t => (
+            { value: 'light'  as ThemeMode, label: 'Light',  preview: 'bg-white',                          border: 'border-gray-200' },
+            { value: 'dark'   as ThemeMode, label: 'Dark',   preview: 'bg-gradient-to-br from-gray-800 to-gray-900', border: 'border-gray-400' },
+            { value: 'system' as ThemeMode, label: 'System', preview: 'bg-gradient-to-br from-white to-gray-800',    border: 'border-gray-400' },
+          ]).map(t => (
             <button key={t.value} onClick={() => setTheme(t.value)}
               className={`relative p-4 rounded-2xl border-2 transition-all text-center ${theme === t.value ? 'border-blue-600 bg-blue-50 shadow-md shadow-blue-600/20' : `border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm`}`}>
               <div className={`w-full h-12 rounded-xl border ${t.border} ${t.preview} mb-3 shadow-inner`} />
@@ -279,12 +284,71 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     </div>
   );
 
+  const creditsPanel = (
+    <div className="space-y-8">
+      {/* Credit Points Management */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Credit Points Management</p>
+        <div className="space-y-4">
+          {[
+            { label: 'Points per Free Vote', value: freeVotePoints, onChange: setFreeVotePoints, desc: 'Credits awarded for each free vote cast' },
+            { label: 'Points per Premium Vote', value: premiumVotePoints, onChange: setPremiumVotePoints, desc: 'Credits awarded for each premium vote cast' },
+          ].map(field => (
+            <div key={field.label} className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 bg-white">
+              <div>
+                <p className="text-sm font-bold text-gray-800">{field.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{field.desc}</p>
+              </div>
+              <input
+                type="number"
+                min="0"
+                value={field.value}
+                onChange={e => field.onChange(e.target.value)}
+                className="w-24 px-3 py-2 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-800 text-right focus:outline-none focus:border-yellow-500 transition-colors"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Price Management */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Price Management</p>
+        <div className="space-y-4">
+          {[
+            { label: 'Basic Package Price (ETB)', value: basicPackagePrice, onChange: setBasicPackagePrice, desc: 'Price for the basic voting package' },
+            { label: 'Premium Package Price (ETB)', value: premiumPackagePrice, onChange: setPremiumPackagePrice, desc: 'Price for the premium voting package' },
+          ].map(field => (
+            <div key={field.label} className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 bg-white">
+              <div>
+                <p className="text-sm font-bold text-gray-800">{field.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{field.desc}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-bold text-gray-500">ETB</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={field.value}
+                  onChange={e => field.onChange(e.target.value)}
+                  className="w-24 px-3 py-2 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-800 text-right focus:outline-none focus:border-yellow-500 transition-colors"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   const panels: Record<PanelId, React.ReactNode> = {
     profile: profilePanel,
     notifications: notificationsPanel,
     security: securityPanel,
     appearance: appearancePanel,
     language: languagePanel,
+    credits: creditsPanel,
   };
 
   return createPortal(

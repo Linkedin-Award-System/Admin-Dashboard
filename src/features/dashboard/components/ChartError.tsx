@@ -1,35 +1,28 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Card } from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
 
-/**
- * ChartError Component
- * 
- * Error state display for chart components.
- * Shows a clear error message with a retry button to attempt reloading the data.
- */
-export function ChartError({ 
-  error, 
-  onRetry 
-}: { 
-  error: Error; 
-  onRetry: () => void;
-}) {
+export function ChartError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
-    <Card className="p-6">
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Failed to load chart data
-        </h3>
-        <p className="text-sm text-gray-600 mb-6 max-w-md">
-          {error.message || 'An unexpected error occurred while loading the chart.'}
-        </p>
-        <Button onClick={onRetry} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Retry
-        </Button>
-      </div>
-    </Card>
+    <div style={{
+      background: '#fff', borderRadius: 16, border: '1px solid #fecaca',
+      padding: '20px', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', minHeight: 200,
+      textAlign: 'center', gap: 10,
+    }}>
+      <AlertCircle size={28} style={{ color: '#ef4444' }} />
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', margin: 0 }}>Failed to load chart data</p>
+      <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>{error.message}</p>
+      <button
+        onClick={onRetry}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 14px', borderRadius: 8,
+          border: '1px solid #e5e7eb', background: '#fff',
+          fontSize: 12, fontWeight: 600, color: '#374151',
+          cursor: 'pointer',
+        }}
+      >
+        <RefreshCw size={13} /> Retry
+      </button>
+    </div>
   );
 }

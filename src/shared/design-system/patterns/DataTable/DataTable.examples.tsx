@@ -121,7 +121,7 @@ export function CustomRenderingExample() {
       align: 'right',
       render: (value) => (
         <span className={value < 0 ? 'text-red-600' : 'text-green-600'}>
-          ${Math.abs(value).toFixed(2)}
+          ETB {Math.abs(value).toFixed(2)}
         </span>
       )
     },

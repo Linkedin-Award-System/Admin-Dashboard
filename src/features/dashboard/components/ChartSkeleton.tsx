@@ -1,37 +1,20 @@
-import { Card } from '@/shared/components/ui/card';
-import { Skeleton } from '@/shared/design-system/components/Skeleton';
-
-/**
- * ChartSkeleton Component
- * 
- * Loading skeleton for chart components with animated shimmer effect.
- * Uses enhanced Skeleton component with wave animation.
- * Matches chart dimensions and provides visual feedback while data is loading.
- * 
- * Layout:
- * - Card container with 20px padding (p-5)
- * - Header with icon (24px) and title (24px height, 192px width)
- * - Chart area with configurable height (default 300px)
- * - 16px spacing between elements
- */
-export function ChartSkeleton({ height = 300 }: { height?: number }) {
+export function ChartSkeleton({ height = 280 }: { height?: number }) {
   return (
-    <Card className="border border-gray-200">
-      <div className="p-5 space-y-4">
-        {/* Header skeleton */}
-        <div className="flex items-center gap-3">
-          <Skeleton variant="rectangular" width="24px" height="24px" className="rounded" />
-          <Skeleton variant="rectangular" width="192px" height="24px" />
-        </div>
-
-        {/* Chart area skeleton - matches chart dimensions */}
-        <Skeleton 
-          variant="rectangular" 
-          width="100%" 
-          height={height}
-          className="rounded-lg" 
-        />
+    <div style={{
+      background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb',
+      padding: '20px', display: 'flex', flexDirection: 'column', gap: 16,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f3f4f6' }} />
+        <div style={{ width: 140, height: 14, borderRadius: 4, background: '#f3f4f6' }} />
       </div>
-    </Card>
+      <div style={{
+        width: '100%', height, borderRadius: 8,
+        background: 'linear-gradient(90deg, #f3f4f6 25%, #e9eaec 50%, #f3f4f6 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.5s infinite',
+      }} />
+      <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+    </div>
   );
 }

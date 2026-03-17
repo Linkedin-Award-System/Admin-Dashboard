@@ -1,33 +1,31 @@
 import { BarChart3 } from 'lucide-react';
-import { Card } from '@/shared/components/ui/card';
 import type { LucideIcon } from 'lucide-react';
 
-/**
- * ChartEmpty Component
- * 
- * Empty state display for chart components when no data is available.
- * Shows a friendly message with an icon to guide users.
- */
-export function ChartEmpty({ 
+export function ChartEmpty({
   message = 'No data available',
   icon: Icon = BarChart3,
-}: { 
+}: {
   message?: string;
   icon?: LucideIcon;
 }) {
   return (
-    <Card className="p-6">
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="rounded-full bg-gray-100 p-4 mb-4">
-          <Icon className="h-8 w-8 text-gray-400" />
-        </div>
-        <p className="text-sm font-medium text-gray-700 mb-1">
-          {message}
-        </p>
-        <p className="text-xs text-gray-500">
-          Data will appear here once available
-        </p>
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      height: '100%', minHeight: 160,
+      textAlign: 'center', gap: 10,
+    }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: '50%',
+        background: '#f9fafb', border: '1px solid #e5e7eb',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={20} style={{ color: '#d1d5db' }} />
       </div>
-    </Card>
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', margin: 0 }}>{message}</p>
+        <p style={{ fontSize: 11, color: '#9ca3af', margin: '3px 0 0' }}>Data will appear here once available</p>
+      </div>
+    </div>
   );
 }

@@ -1,13 +1,15 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { loginSchema, type LoginFormData } from '../schemas/login-schema';
 import { useAuthStore } from '../store/auth-store';
 import { Button } from '@/shared/components/ui/button';
 
 export function LoginForm() {
   const [error, setError] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
   const login = useAuthStore((state) => state.login);
 
   const {
@@ -87,10 +89,10 @@ export function LoginForm() {
             </div>
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
               className={`
-                block w-full pl-10 pr-3 py-3 border rounded-lg
+                block w-full pl-10 pr-10 py-3 border rounded-lg
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                 transition-colors
                 ${errors.password 
@@ -100,6 +102,14 @@ export function LoginForm() {
               `}
               {...register('password')}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
           {errors.password && (
             <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -124,9 +134,9 @@ export function LoginForm() {
           </div>
 
           <div className="text-sm">
-            <a href="#" className="font-medium text-blue-600 hover:text-blue-700">
+            <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-700">
               Forgot password?
-            </a>
+            </Link>
           </div>
         </div>
 

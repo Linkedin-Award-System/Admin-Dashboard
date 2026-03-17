@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthGuard } from '@/features/auth';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { ToastProvider } from '@/shared/hooks/use-toast';
+import { ThemeProvider } from '@/shared/hooks/use-theme';
 import { LoadingOverlay } from '@/shared/components/ui/loading-overlay';
 import { useNavigationLoading } from '@/shared/hooks/use-navigation-loading';
 import { config } from '@/lib/config';
@@ -17,6 +18,8 @@ const VotingPage = lazy(() => import('@/pages/VotingPage'));
 const PaymentsPage = lazy(() => import('@/pages/PaymentsPage'));
 const ContentPage = lazy(() => import('@/pages/ContentPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +49,8 @@ function AppRoutes() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected routes */}
           <Route
@@ -111,13 +116,15 @@ function AppRoutes() {
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </ToastProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </ToastProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

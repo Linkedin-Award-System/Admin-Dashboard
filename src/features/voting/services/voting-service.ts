@@ -31,8 +31,9 @@ interface Category {
 interface Nominee {
   id: string;
   fullName: string;
+  name?: string;
   voteCount: number;
-  categories: { id: string; name: string }[];
+  categories?: Array<{ id: string; name: string } | string>;
 }
 
 export const votingService = {
@@ -84,17 +85,21 @@ export const votingService = {
     return Array.from(categoryStats.entries()).map(([categoryId, stats]) => {
       const categoryName = categoryMap.get(categoryId) || 'Unknown Category';
       
-      // Get nominees for this category
-      const categoryNominees = nominees.filter(n => 
-        n.categories.some(c => c.id === categoryId)
-      );
+      // Get nominees for this category (defensive: handle flat string IDs and object shapes)
+      const categoryNominees = nominees.filter(n => {
+        if (!n.categories || n.categories.length === 0) return false;
+        return n.categories.some(c =>
+          typeof c === 'string' ? c === categoryId : c.id === categoryId
+        );
+      });
       
       // Build nominee vote data
       const nomineeVoteData = categoryNominees.map(nominee => {
         const voteCount = stats.nomineeVotes.get(nominee.id) || 0;
+        const nomineeName = nominee.fullName ?? (nominee as any).name ?? 'Unknown';
         return {
           nomineeId: nominee.id,
-          nomineeName: nominee.fullName,
+          nomineeName,
           voteCount,
           percentage: stats.totalVotes > 0 ? (voteCount / stats.totalVotes) * 100 : 0,
         };
