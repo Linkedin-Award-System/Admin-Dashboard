@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoginForm } from '@/features/auth';
 import { useAuthStore } from '@/features/auth';
 import { Award, Shield } from 'lucide-react';
+import awardImage from '@/assets/Images/award_image.jpg';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export function LoginPage() {
 
       {/* Left Panel - Award Image */}
       <img
-        src="/src/assets/Images/award_image.jpg"
+        src={awardImage}
         alt="LinkedIn Creative Awards"
         className="hidden lg:block lg:w-1/2 object-cover h-screen"
       />

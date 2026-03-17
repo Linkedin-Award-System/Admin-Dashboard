@@ -1,5 +1,6 @@
 import { Shield } from 'lucide-react';
 import { ResetPasswordForm } from '@/features/auth/components/ResetPasswordForm';
+import awardImage from '@/assets/Images/award_image.jpg';
 
 export function ResetPasswordPage() {
   return (
@@ -12,7 +13,7 @@ export function ResetPasswordPage() {
 
       {/* Left Panel */}
       <img
-        src="/src/assets/Images/award_image.jpg"
+        src={awardImage}
         alt="LinkedIn Creative Awards"
         className="hidden lg:block lg:w-1/2 object-cover h-screen"
       />

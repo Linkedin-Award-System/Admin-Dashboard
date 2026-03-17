@@ -1,5 +1,6 @@
 import { Shield } from 'lucide-react';
 import { ForgotPasswordForm } from '@/features/auth/components/ForgotPasswordForm';
+import awardImage from '@/assets/Images/award_image.jpg';
 
 export function ForgotPasswordPage() {
   return (
@@ -12,7 +13,7 @@ export function ForgotPasswordPage() {
 
       {/* Left Panel */}
       <img
-        src="/src/assets/Images/award_image.jpg"
+        src={awardImage}
         alt="LinkedIn Creative Awards"
         className="hidden lg:block lg:w-1/2 object-cover h-screen"
       />
