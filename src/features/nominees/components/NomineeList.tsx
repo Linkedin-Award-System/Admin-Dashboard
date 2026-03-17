@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNominees } from '../hooks/use-nominees';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { Button, PageHeader } from '@/shared/design-system';
+import { useSearchParams } from 'react-router-dom';
 import {
   Pencil, Trash2, Plus, Users, Linkedin, Search, X,
   ChevronDown, BarChart2, Award, SlidersHorizontal,
@@ -224,7 +225,9 @@ const CompactRow = ({
 
 
 export const NomineeList = ({ onEdit, onDelete, onCreate, onSelect }: NomineeListProps) => {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Derive category filter directly from URL — single source of truth
+  const selectedCategoryId = searchParams.get('categoryId') ?? '';
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
@@ -300,7 +303,14 @@ export const NomineeList = ({ onEdit, onDelete, onCreate, onSelect }: NomineeLis
     uniqueNominees.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((n) => n.id)
   );
 
-  const handleCategoryChange = (value: string) => { setSelectedCategoryId(value); setCurrentPage(1); };
+  const handleCategoryChange = (value: string) => {
+    setCurrentPage(1);
+    if (value) {
+      setSearchParams({ categoryId: value });
+    } else {
+      setSearchParams({});
+    }
+  };
   const handleSearch = (value: string) => { setSearchQuery(value); setCurrentPage(1); };
 
   if (isLoading) return <NomineeListSkeleton />;
