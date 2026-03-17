@@ -163,6 +163,44 @@ export const votingService = {
     return uniqueUserIds.size;
   },
 
+  async getVotersByNominee(nomineeId: string, page: number = 1, limit: number = 20): Promise<{
+    voters: Array<{ userId: string; quantity: number; type: string; createdAt: string }>;
+    total: number;
+    totalPages: number;
+  }> {
+    const response = await apiClient.get<VotesResponse>('/admin/votes', {
+      params: { nomineeId, page, limit },
+    });
+    const votes = response.votes || [];
+    const pagination = response.pagination;
+
+    // Aggregate by userId — sum quantities
+    const voterMap = new Map<string, { userId: string; quantity: number; type: string; createdAt: string }>();
+    votes.forEach(vote => {
+      const existing = voterMap.get(vote.userId);
+      if (existing) {
+        existing.quantity += vote.quantity;
+      } else {
+        voterMap.set(vote.userId, {
+          userId: vote.userId,
+          quantity: vote.quantity,
+          type: vote.type,
+          createdAt: vote.createdAt,
+        });
+      }
+    });
+
+    const voters = Array.from(voterMap.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    return {
+      voters,
+      total: pagination?.total ?? voters.length,
+      totalPages: pagination?.totalPages ?? 1,
+    };
+  },
+
   async getDashboard(): Promise<any> {
     const response = await apiClient.get('/admin/dashboard');
     return response;
