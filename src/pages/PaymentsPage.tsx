@@ -14,39 +14,39 @@ const PaymentsPageInner = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-7xl">
-        <div className="mb-8">
-          <PageHeader
-            title="Financials"
-            subtitle="Track and manage platform transactions and revenue"
-            actions={
-              <ExportButton
-                onExport={(format) => exportService.exportPayments(format, payments ?? [])}
-                filename="payments"
-                label="Export All"
-                className="rounded-2xl border-border-light hover:bg-bg-tertiary font-semibold h-12 px-6"
-              />
-            }
-          />
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Header */}
+        <PageHeader
+          title="Financials"
+          subtitle="Track and manage platform transactions and revenue"
+          actions={
+            <ExportButton
+              onExport={(format) => exportService.exportPayments(format, payments ?? [])}
+              filename="payments"
+              label="Export All"
+              className="rounded-2xl border-border-light hover:bg-bg-tertiary font-semibold h-11 px-5"
+            />
+          }
+        />
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
-          {/* Left sidebar: Revenue card + filters */}
-          <div className="xl:col-span-1 space-y-5 animate-in fade-in slide-in-from-left-4 duration-700">
+        {/* Top strip: Revenue summary + Filters side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+          {/* Revenue card — takes 1 col */}
+          <div className="lg:col-span-1">
             <RevenueCard />
-            <div className="bg-white p-5 rounded-[1.75rem] border border-border-light shadow-sm">
-              <PaymentFiltersForm
-                onFilterChange={setFilters}
-                onSearchChange={setSearchQuery}
-              />
-            </div>
           </div>
 
-          {/* Right: Transaction list */}
-          <div className="xl:col-span-3 animate-in fade-in slide-in-from-right-4 duration-700">
-            <PaymentList filters={filters} searchQuery={searchQuery} />
+          {/* Filters — takes 2 cols */}
+          <div className="lg:col-span-2 bg-white rounded-[1.75rem] border border-border-light shadow-sm p-6">
+            <PaymentFiltersForm
+              onFilterChange={setFilters}
+              onSearchChange={setSearchQuery}
+            />
           </div>
         </div>
+
+        {/* Transaction list */}
+        <PaymentList filters={filters} searchQuery={searchQuery} />
       </div>
     </Layout>
   );
