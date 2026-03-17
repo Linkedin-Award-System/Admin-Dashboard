@@ -38,7 +38,15 @@ export default async function handler(req, res) {
       }
     });
 
-    const data = await response.json();
+    let data;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = { success: false, error: { code: 'INVALID_RESPONSE', message: text || 'Non-JSON response from upstream' } };
+    }
+
     res.status(response.status).json(data);
   } catch (err) {
     console.error('Proxy error:', err);
