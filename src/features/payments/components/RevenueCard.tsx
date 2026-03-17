@@ -1,7 +1,27 @@
 import { useTotalRevenue, usePayments } from '../hooks/use-payments';
-import { Landmark, TrendingUp, Clock, XCircle, RotateCcw } from 'lucide-react';
+import { Landmark, TrendingUp } from 'lucide-react';
 import { MetricCardSkeleton } from '@/features/dashboard/components/MetricCardSkeleton';
-import { formatCompactCurrency, formatCurrency } from '@/features/dashboard/utils/format-utils';
+import { formatCurrency } from '@/features/dashboard/utils/format-utils';
+
+function safeFormatRevenue(value: number): string {
+  if (!isFinite(value) || value > 1e12) return 'ETB 0.00';
+  return formatCurrency(value);
+}
+
+function safeCompact(value: number): string {
+  if (!isFinite(value) || value > 1e12) return 'ETB 0';
+  if (value >= 1_000_000_000) return `ETB ${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `ETB ${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `ETB ${(value / 1_000).toFixed(1)}K`;
+  return `ETB ${value.toFixed(2)}`;
+}
+
+const STATUS_ROWS = [
+  { key: 'COMPLETED', label: 'Settled',  dot: '#10b981' },
+  { key: 'PENDING',   label: 'Pending',  dot: '#f59e0b' },
+  { key: 'FAILED',    label: 'Failed',   dot: '#ef4444' },
+  { key: 'REFUNDED',  label: 'Refunded', dot: '#6366f1' },
+] as const;
 
 export const RevenueCard = () => {
   const { data: totalRevenue, isLoading: revLoading, error: revError } = useTotalRevenue();
@@ -13,70 +33,97 @@ export const RevenueCard = () => {
 
   if (revError) {
     return (
-      <div className="bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center gap-3 text-red-700 mb-2">
-          <div className="p-2 bg-red-200/50 rounded-xl">
-            <Landmark className="h-5 w-5" />
-          </div>
-          <p className="font-semibold text-sm">Error Loading Revenue</p>
+      <div style={{ background: '#fff', border: '1px solid #fee2e2', borderRadius: '1.5rem', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#dc2626' }}>
+          <Landmark size={18} />
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Error loading revenue</span>
         </div>
-        <p className="text-xs text-red-600">Unable to retrieve revenue data.</p>
       </div>
     );
   }
 
-  const completed = payments?.filter(p => p.status === 'COMPLETED') ?? [];
-  const pending = payments?.filter(p => p.status === 'PENDING') ?? [];
-  const failed = payments?.filter(p => p.status === 'FAILED') ?? [];
-  const refunded = payments?.filter(p => p.status === 'REFUNDED') ?? [];
+  const byStatus = (s: string) => payments?.filter(p => p.status === s) ?? [];
+  const completed = byStatus('COMPLETED');
+  const pending   = byStatus('PENDING');
+  const failed    = byStatus('FAILED');
+  const refunded  = byStatus('REFUNDED');
 
-  const completedRevenue = completed.reduce((sum, p) => sum + p.amount, 0);
-  const pendingRevenue = pending.reduce((sum, p) => sum + p.amount, 0);
+  const completedRevenue = completed.reduce((s, p) => s + (p.amount ?? 0), 0);
+  const pendingRevenue   = pending.reduce((s, p) => s + (p.amount ?? 0), 0);
 
-  const stats = [
-    { label: 'Settled', count: completed.length, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-    { label: 'Pending', count: pending.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-    { label: 'Failed', count: failed.length, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100' },
-    { label: 'Refunded', count: refunded.length, icon: RotateCcw, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
-  ];
+  const counts: Record<string, number> = {
+    COMPLETED: completed.length,
+    PENDING:   pending.length,
+    FAILED:    failed.length,
+    REFUNDED:  refunded.length,
+  };
+
+  const total = totalRevenue ?? 0;
 
   return (
-    <div className="bg-white rounded-[1.75rem] border border-border-light shadow-sm overflow-hidden">
-      {/* Header gradient */}
-      <div className="bg-gradient-to-br from-[#085299] to-[#0a66c2] p-6 text-white">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
-            <Landmark className="h-5 w-5 text-white" />
+    <div style={{
+      background: '#fff',
+      borderRadius: '1.5rem',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+      overflow: 'hidden',
+    }}>
+      {/* Gradient header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #064e8c 0%, #0a66c2 60%, #1d7fd4 100%)',
+        padding: '1.5rem 1.5rem 1.75rem',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', top: -50, right: -50, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -40, left: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Landmark size={16} color="#fff" />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Total Revenue
+            </span>
           </div>
-          <span className="text-xs font-semibold uppercase tracking-widest text-blue-100">Total Revenue</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.15)', borderRadius: 99, padding: '4px 10px' }}>
+            <TrendingUp size={11} color="rgba(255,255,255,0.9)" />
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.05em' }}>LIVE</span>
+          </div>
         </div>
-        <div className="text-3xl font-bold tracking-tight">
-          {formatCompactCurrency(totalRevenue ?? 0)}
-        </div>
-        <div className="text-sm text-blue-200 mt-1 font-medium">
-          {formatCurrency(totalRevenue ?? 0)} total collected
+
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ fontSize: '2.25rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 8 }}>
+            {safeCompact(total)}
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 500, letterSpacing: '0.01em' }}>
+            {safeFormatRevenue(total)} total collected
+          </div>
         </div>
       </div>
 
       {/* Revenue breakdown */}
-      <div className="p-4 space-y-2 border-b border-border-light">
-        <div className="flex items-center justify-between py-2 px-3 bg-emerald-50 rounded-xl border border-emerald-100">
-          <span className="text-xs font-semibold text-emerald-700">Settled Revenue</span>
-          <span className="text-sm font-bold text-emerald-700">{formatCompactCurrency(completedRevenue)}</span>
+      <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 1rem', background: '#f0fdf4', borderRadius: '0.75rem', border: '1px solid #d1fae5' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#065f46' }}>Settled Revenue</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#059669' }}>{safeFormatRevenue(completedRevenue)}</span>
         </div>
-        <div className="flex items-center justify-between py-2 px-3 bg-amber-50 rounded-xl border border-amber-100">
-          <span className="text-xs font-semibold text-amber-700">Pending Revenue</span>
-          <span className="text-sm font-bold text-amber-700">{formatCompactCurrency(pendingRevenue)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 1rem', background: '#fffbeb', borderRadius: '0.75rem', border: '1px solid #fde68a' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>Pending Revenue</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706' }}>{safeFormatRevenue(pendingRevenue)}</span>
         </div>
       </div>
 
-      {/* Status breakdown grid */}
-      <div className="p-4 grid grid-cols-2 gap-2">
-        {stats.map(({ label, count, icon: Icon, color, bg, border }) => (
-          <div key={label} className={`flex flex-col items-center justify-center p-3 rounded-xl ${bg} border ${border}`}>
-            <Icon className={`h-4 w-4 ${color} mb-1`} />
-            <span className={`text-lg font-bold ${color}`}>{count}</span>
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+      {/* Status count rows */}
+      <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {STATUS_ROWS.map(({ key, label, dot }) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 1rem', borderRadius: '0.625rem', background: '#f9fafb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{label}</span>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{counts[key]}</span>
           </div>
         ))}
       </div>
