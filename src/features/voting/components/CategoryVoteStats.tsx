@@ -14,14 +14,22 @@ import {
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/features/dashboard/utils/format-utils';
 import { chartColorPalette } from '@/features/dashboard/utils/chart-config';
+import { useNavigate } from 'react-router-dom';
 
 interface CategoryVoteStatsProps {
   dateRange?: DateRange;
 }
 
+const NOMINEES_PER_PAGE = 10;
+
 function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
   const [expanded, setExpanded] = useState(true);
+  const [nomPage, setNomPage] = useState(1);
+  const navigate = useNavigate();
   const maxVotes = stat.nominees[0]?.voteCount ?? 0;
+
+  const totalNomPages = Math.max(1, Math.ceil(stat.nominees.length / NOMINEES_PER_PAGE));
+  const pagedNominees = stat.nominees.slice((nomPage - 1) * NOMINEES_PER_PAGE, nomPage * NOMINEES_PER_PAGE);
 
   return (
     <div className="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden">
@@ -37,13 +45,12 @@ function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href={`/nominees?category=${stat.categoryId}`}
+          <button
             className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-            onClick={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); navigate(`/nominees?categoryId=${stat.categoryId}`); }}
           >
             View nominees <ExternalLink size={11} />
-          </a>
+          </button>
           <button
             onClick={() => setExpanded(v => !v)}
             className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
@@ -86,61 +93,87 @@ function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
               <p className="text-sm text-gray-400">No nominees in this category</p>
             </div>
           ) : (
-            stat.nominees.map((nominee, idx) => {
-              const isLeader = nominee.nomineeId === stat.leadingNominee.id;
-              const barWidth = maxVotes > 0 ? (nominee.voteCount / maxVotes) * 100 : 0;
+            <>
+              {pagedNominees.map((nominee, idx) => {
+                const globalIdx = (nomPage - 1) * NOMINEES_PER_PAGE + idx;
+                const isLeader = nominee.nomineeId === stat.leadingNominee.id;
+                const barWidth = maxVotes > 0 ? (nominee.voteCount / maxVotes) * 100 : 0;
 
-              return (
-                <div
-                  key={nominee.nomineeId}
-                  className="group cursor-pointer"
-                  onClick={() => window.location.assign(`/nominees?id=${nominee.nomineeId}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') window.location.assign(`/nominees?id=${nominee.nomineeId}`); }}
-                >
-                  {/* Name row */}
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'w-5 h-5 rounded-md flex items-center justify-center text-xs font-semibold shrink-0',
-                          isLeader ? 'text-white' : 'bg-gray-100 text-gray-400'
-                        )}
-                        style={isLeader ? { backgroundColor: chartColorPalette.primary } : {}}
-                      >
-                        {idx + 1}
-                      </span>
-                      <p className={cn(
-                        'text-sm font-medium truncate max-w-[180px] group-hover:text-blue-700 transition-colors',
-                        isLeader ? 'text-gray-900' : 'text-gray-600'
-                      )}>
-                        {nominee.nomineeName}
-                      </p>
+                return (
+                  <div
+                    key={nominee.nomineeId}
+                    className="group cursor-pointer"
+                    onClick={() => navigate(`/nominees/${nominee.nomineeId}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/nominees/${nominee.nomineeId}`); }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'w-5 h-5 rounded-md flex items-center justify-center text-xs font-semibold shrink-0',
+                            isLeader ? 'text-white' : 'bg-gray-100 text-gray-400'
+                          )}
+                          style={isLeader ? { backgroundColor: chartColorPalette.primary } : {}}
+                        >
+                          {globalIdx + 1}
+                        </span>
+                        <p className={cn(
+                          'text-sm font-medium truncate max-w-[180px] group-hover:text-blue-700 transition-colors',
+                          isLeader ? 'text-gray-900' : 'text-gray-600'
+                        )}>
+                          {nominee.nomineeName}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs font-semibold text-gray-700">{formatNumber(nominee.voteCount)}</span>
+                        <span className="text-xs text-gray-400">({nominee.percentage.toFixed(1)}%)</span>
+                        {isLeader && <TrendingUp size={11} className="text-green-500" />}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-xs font-semibold text-gray-700">{formatNumber(nominee.voteCount)}</span>
-                      <span className="text-xs text-gray-400">({nominee.percentage.toFixed(1)}%)</span>
-                      {isLeader && <TrendingUp size={11} className="text-green-500" />}
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${barWidth}%`,
+                          background: isLeader
+                            ? `linear-gradient(to right, ${chartColorPalette.primary}99, ${chartColorPalette.primary})`
+                            : '#d1d5db',
+                          boxShadow: isLeader ? `0 0 8px ${chartColorPalette.primary}40` : 'none',
+                        }}
+                      />
                     </div>
                   </div>
+                );
+              })}
 
-                  {/* Progress bar */}
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${barWidth}%`,
-                        background: isLeader
-                          ? `linear-gradient(to right, ${chartColorPalette.primary}99, ${chartColorPalette.primary})`
-                          : '#d1d5db',
-                        boxShadow: isLeader ? `0 0 8px ${chartColorPalette.primary}40` : 'none',
-                      }}
-                    />
+              {/* Per-category pagination */}
+              {totalNomPages > 1 && (
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <span className="text-xs text-gray-400">
+                    {(nomPage - 1) * NOMINEES_PER_PAGE + 1}–{Math.min(nomPage * NOMINEES_PER_PAGE, stat.nominees.length)} of {stat.nominees.length}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setNomPage(p => Math.max(1, p - 1))}
+                      disabled={nomPage === 1}
+                      className="h-7 w-7 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronDown size={13} className="rotate-90" />
+                    </button>
+                    <span className="text-xs font-medium text-gray-600 min-w-[40px] text-center">{nomPage}/{totalNomPages}</span>
+                    <button
+                      onClick={() => setNomPage(p => Math.min(totalNomPages, p + 1))}
+                      disabled={nomPage === totalNomPages}
+                      className="h-7 w-7 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronDown size={13} className="-rotate-90" />
+                    </button>
                   </div>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </div>
       )}
