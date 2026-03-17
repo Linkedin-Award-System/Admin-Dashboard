@@ -10,6 +10,13 @@ import { uploadService } from '@/features/uploads/services/upload-service';
 import type { Nominee } from '../types';
 import { Upload, X, User } from 'lucide-react';
 
+const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
+function resolveImageUrl(url?: string): string {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('blob:')) return url;
+  return `${RAILWAY_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 interface NomineeFormProps {
   nominee?: Nominee;
   onSuccess?: () => void;
@@ -24,7 +31,7 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
 
   // Store the pending file — upload happens at submit time, not on select
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>(nominee?.profileImageUrl || '');
+  const [imagePreview, setImagePreview] = useState<string>(resolveImageUrl(nominee?.profileImageUrl));
   const [imageUploading, setImageUploading] = useState(false);
   const [imageError, setImageError] = useState<string>('');
   const [uploadFailed, setUploadFailed] = useState(false);
@@ -61,7 +68,7 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
         profileImageUrl: nominee.profileImageUrl || '',
         categoryIds: nominee.categories?.map(c => c.id) || [],
       });
-      setImagePreview(nominee.profileImageUrl || '');
+      setImagePreview(resolveImageUrl(nominee.profileImageUrl));
       setPendingFile(null);
       setImageError('');
     }
