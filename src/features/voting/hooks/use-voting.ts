@@ -36,3 +36,12 @@ export const useUniqueVoterCount = () => {
     staleTime: 30000,
   });
 };
+
+export const useVotersByNominee = (nomineeId: string, page: number = 1, limit: number = 20) => {
+  return useQuery({
+    queryKey: ['voters-by-nominee', nomineeId, page, limit],
+    queryFn: () => votingService.getVotersByNominee(nomineeId, page, limit),
+    enabled: !!nomineeId,
+    staleTime: 30000,
+  });
+};
