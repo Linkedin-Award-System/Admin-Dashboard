@@ -1,4 +1,4 @@
-import { Menu, Search, Bell, Settings } from 'lucide-react';
+import { Menu, Bell, Settings } from 'lucide-react';
 import { useAuthStore } from '@/features/auth';
 import { useState } from 'react';
 import { NotificationsDropdown } from './NotificationsDropdown';
@@ -29,17 +29,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
             <Menu size={24} />
           </button>
 
-          <div className="hidden md:flex items-center gap-4 px-5 py-3 bg-white/50 rounded-2xl border border-white/60 w-full max-w-md group focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:border-primary-500/50 focus-within:bg-white transition-all duration-300">
-            <Search size={18} className="text-text-tertiary group-focus-within:text-primary-600 transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Query Intelligence Engine..." 
-              className="bg-transparent border-none outline-none text-xs font-bold w-full placeholder:text-text-disabled text-text-primary tracking-wide uppercase"
-            />
-            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-border-light bg-bg-secondary text-[10px] font-black text-text-tertiary shadow-inner">
-              ⌘K
-            </kbd>
-          </div>
+          <div className="hidden md:block" />
         </div>
 
         {/* Right Section: Actions & User */}
