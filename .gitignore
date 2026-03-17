@@ -89,4 +89,8 @@ ANALYTICS_*.md
 ACCESSIBILITY_*.md
 LOGIN_*.md
 SETUP.md
+SECONDARY_*.md
+VOTING_*.md
+RATE_*.md
+GIT_*.md
 test-api-integration.md
