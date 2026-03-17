@@ -168,15 +168,15 @@ export const votingService = {
     total: number;
     totalPages: number;
   }> {
+    // Fetch all votes for this nominee — filter client-side since backend may ignore nomineeId param
     const response = await apiClient.get<VotesResponse>('/admin/votes', {
-      params: { nomineeId, page, limit },
+      params: { nomineeId, limit: 1000 },
     });
-    const votes = response.votes || [];
-    const pagination = response.pagination;
+    const allVotes = (response.votes || []).filter((v) => v.nomineeId === nomineeId);
 
     // Aggregate by userId — sum quantities
     const voterMap = new Map<string, { userId: string; quantity: number; type: string; createdAt: string }>();
-    votes.forEach(vote => {
+    allVotes.forEach(vote => {
       const existing = voterMap.get(vote.userId);
       if (existing) {
         existing.quantity += vote.quantity;
@@ -190,15 +190,15 @@ export const votingService = {
       }
     });
 
-    const voters = Array.from(voterMap.values()).sort(
+    const allVoters = Array.from(voterMap.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    return {
-      voters,
-      total: pagination?.total ?? voters.length,
-      totalPages: pagination?.totalPages ?? 1,
-    };
+    const total = allVoters.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const voters = allVoters.slice((page - 1) * limit, page * limit);
+
+    return { voters, total, totalPages };
   },
 
   async getDashboard(): Promise<any> {
