@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Bell, Shield, Palette, Globe, Eye, EyeOff, Check, Camera, Coins } from 'lucide-react';
+import { X, User, Bell, Shield, Palette, Eye, EyeOff, Check, Camera, Coins } from 'lucide-react';
 import { useTheme } from '@/shared/hooks/use-theme';
 import type { ThemeMode } from '@/shared/hooks/use-theme';
 
@@ -9,7 +9,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'language' | 'credits';
+type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'credits';
 
 interface NavItem {
   id: PanelId;
@@ -25,7 +25,6 @@ const NAV: NavItem[] = [
   { id: 'notifications', icon: Bell,    label: 'Notifications', accent: 'border-amber-500',   iconBg: 'bg-amber-500',   iconColor: 'text-white' },
   { id: 'security',      icon: Shield,  label: 'Security',      accent: 'border-red-500',     iconBg: 'bg-red-500',     iconColor: 'text-white' },
   { id: 'appearance',    icon: Palette, label: 'Appearance',    accent: 'border-purple-500',  iconBg: 'bg-purple-600',  iconColor: 'text-white' },
-  { id: 'language',      icon: Globe,   label: 'Language',      accent: 'border-emerald-500', iconBg: 'bg-emerald-600', iconColor: 'text-white' },
   { id: 'credits',       icon: Coins,   label: 'Credits',       accent: 'border-yellow-500',  iconBg: 'bg-yellow-500',  iconColor: 'text-white' },
 ];
 
@@ -44,7 +43,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [active, setActive] = useState<PanelId>('profile');
   const [showPw, setShowPw] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [timezone, setTimezone] = useState('UTC');
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifPush, setNotifPush] = useState(true);
   const [notifSms, setNotifSms] = useState(false);
@@ -72,7 +70,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     notifications: 'Control how you receive alerts',
     security: 'Manage password and account security',
     appearance: 'Customize the look of your dashboard',
-    language: 'Set your language and regional preferences',
     credits: 'Configure credit points and package pricing',
   };
 
@@ -225,52 +222,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     </div>
   );
 
-  const languagePanel = (
-    <div className="space-y-5">
-      {[
-        {
-          label: 'Timezone', id: 'tz', value: timezone, onChange: setTimezone,
-          options: [
-            { value: 'UTC',              label: 'UTC — Coordinated Universal Time' },
-            { value: 'America/New_York', label: 'Eastern Time (ET) — UTC-5' },
-            { value: 'America/Chicago',  label: 'Central Time (CT) — UTC-6' },
-            { value: 'America/Los_Angeles', label: 'Pacific Time (PT) — UTC-8' },
-            { value: 'Europe/London',    label: 'London (GMT) — UTC+0' },
-            { value: 'Europe/Paris',     label: 'Paris (CET) — UTC+1' },
-            { value: 'Asia/Dubai',       label: 'Dubai (GST) — UTC+4' },
-            { value: 'Asia/Riyadh',      label: 'Riyadh (AST) — UTC+3' },
-            { value: 'Asia/Tokyo',       label: 'Tokyo (JST) — UTC+9' },
-          ],
-        },
-      ].map(field => (
-        <div key={field.id} className="space-y-1.5">
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{field.label}</label>
-          <select value={field.value} onChange={e => field.onChange(e.target.value)} className={inp}>
-            {field.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </div>
-      ))}
-      <div className="space-y-1.5">
-        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Display Language</label>
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 border-2 border-gray-100">
-          <Globe size={16} className="text-gray-500 shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-gray-700">English (US)</p>
-            <p className="text-xs text-gray-400 mt-0.5">This is the only supported language</p>
-          </div>
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Date Format</label>
-        <select className={inp} defaultValue="MM/DD/YYYY">
-          <option>MM/DD/YYYY</option>
-          <option>DD/MM/YYYY</option>
-          <option>YYYY-MM-DD</option>
-        </select>
-      </div>
-    </div>
-  );
-
   const creditsPanel = (
     <div className="space-y-8">
       {/* Credit Points Management */}
@@ -334,7 +285,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     notifications: notificationsPanel,
     security: securityPanel,
     appearance: appearancePanel,
-    language: languagePanel,
     credits: creditsPanel,
   };
 
