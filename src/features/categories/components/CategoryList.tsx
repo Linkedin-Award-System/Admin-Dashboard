@@ -14,26 +14,6 @@ interface CategoryListProps {
   onCreate?: () => void;
 }
 
-// Deterministic color palette for category icons
-const GRADIENT_PALETTES = [
-  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', text: '#7c3a1e' },
-  { bg: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', text: '#1a3a5c' },
-  { bg: 'linear-gradient(135deg, #fd7043 0%, #ff8a65 100%)', text: '#fff' },
-  { bg: 'linear-gradient(135deg, #26c6da 0%, #00acc1 100%)', text: '#fff' },
-];
-
-function getPalette(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return GRADIENT_PALETTES[Math.abs(hash) % GRADIENT_PALETTES.length];
-}
-
 export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) => {
   const { data: categories, isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,12 +146,10 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
           {paginatedCategories.map((category) => {
-            const palette = getPalette(category.name);
             return (
               <CategoryCard
                 key={category.id}
                 category={category}
-                palette={palette}
                 onEdit={onEdit}
                 onDelete={onDelete}
               />
@@ -204,12 +182,11 @@ export const CategoryList = ({ onEdit, onDelete, onCreate }: CategoryListProps) 
 
 interface CardProps {
   category: Category;
-  palette: { bg: string; text: string };
   onEdit?: (c: Category) => void;
   onDelete?: (c: Category) => void;
 }
 
-const CategoryCard = ({ category, palette, onEdit, onDelete }: CardProps) => {
+const CategoryCard = ({ category, onEdit, onDelete }: CardProps) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -231,28 +208,8 @@ const CategoryCard = ({ category, palette, onEdit, onDelete }: CardProps) => {
         overflow: 'hidden',
       }}
     >
-      {/* Top row: icon + nominee badge */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div
-          style={{
-            width: '3.5rem',
-            height: '3.5rem',
-            borderRadius: '1rem',
-            background: palette.bg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.375rem',
-            fontWeight: 800,
-            color: palette.text,
-            flexShrink: 0,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            transform: hovered ? 'scale(1.08)' : 'scale(1)',
-            transition: 'transform 0.2s ease',
-          }}
-        >
-          {category.name.charAt(0).toUpperCase()}
-        </div>
+      {/* Top row: nominee badge */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
         <div
           style={{
             background: '#eff6ff',

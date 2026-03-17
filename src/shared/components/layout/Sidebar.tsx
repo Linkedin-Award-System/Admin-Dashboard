@@ -6,7 +6,6 @@ import {
   Users,
   Activity,
   Landmark,
-  Globe,
   LogOut,
   User,
 } from 'lucide-react';
@@ -19,12 +18,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard',          path: '/dashboard',  icon: LayoutDashboard },
-  { name: 'Categories',         path: '/categories', icon: Layers },
-  { name: 'Nominees',           path: '/nominees',   icon: Users },
-  { name: 'Voting Hub',         path: '/voting',     icon: Activity },
-  { name: 'Financials',         path: '/payments',   icon: Landmark },
-  { name: 'Content Management', path: '/content',    icon: Globe },
+  { name: 'Dashboard',  path: '/dashboard',  icon: LayoutDashboard },
+  { name: 'Categories', path: '/categories', icon: Layers },
+  { name: 'Nominees',   path: '/nominees',   icon: Users },
+  { name: 'Voting Hub', path: '/voting',     icon: Activity },
+  { name: 'Financials', path: '/payments',   icon: Landmark },
 ];
 
 function HamburgerIcon({ size = 18 }: { size?: number }) {

@@ -44,7 +44,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [active, setActive] = useState<PanelId>('profile');
   const [showPw, setShowPw] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [language, setLanguage] = useState('en');
   const [timezone, setTimezone] = useState('UTC');
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifPush, setNotifPush] = useState(true);
@@ -182,16 +181,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <input type="password" className={inp} placeholder="Repeat new password" />
         </div>
       </div>
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">Two-Factor Authentication</p>
-      <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border-2 border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
-          <Shield size={16} className="text-gray-500" />
-        </div>
-        <div>
-          <p className="text-sm font-bold text-gray-700">Two-Factor Authentication</p>
-          <p className="text-xs text-gray-400 mt-0.5">Contact your system administrator to enable 2FA</p>
-        </div>
-      </div>
     </div>
   );
 
@@ -240,18 +229,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     <div className="space-y-5">
       {[
         {
-          label: 'Display Language', id: 'lang', value: language, onChange: setLanguage,
-          options: [
-            { value: 'en',    label: 'English (US)' },
-            { value: 'en-gb', label: 'English (UK)' },
-            { value: 'fr',    label: 'Français' },
-            { value: 'de',    label: 'Deutsch' },
-            { value: 'es',    label: 'Español' },
-            { value: 'ar',    label: 'العربية' },
-            { value: 'zh',    label: '中文' },
-          ],
-        },
-        {
           label: 'Timezone', id: 'tz', value: timezone, onChange: setTimezone,
           options: [
             { value: 'UTC',              label: 'UTC — Coordinated Universal Time' },
@@ -273,6 +250,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </select>
         </div>
       ))}
+      <div className="space-y-1.5">
+        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Display Language</label>
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 border-2 border-gray-100">
+          <Globe size={16} className="text-gray-500 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-gray-700">English (US)</p>
+            <p className="text-xs text-gray-400 mt-0.5">This is the only supported language</p>
+          </div>
+        </div>
+      </div>
       <div className="space-y-1.5">
         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Date Format</label>
         <select className={inp} defaultValue="MM/DD/YYYY">

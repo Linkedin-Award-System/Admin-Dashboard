@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { User, Settings, LogOut, HelpCircle } from 'lucide-react';
+import { User, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/features/auth';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,17 +41,11 @@ export function ProfileDropdown({ isOpen, onClose, onOpenSettings }: ProfileDrop
     onOpenSettings();
   };
 
-  const handleHelpSupport = () => {
-    window.open('mailto:support@awards.com', '_blank');
-    onClose();
-  };
-
   if (!isOpen) return null;
 
   const menuItems = [
     { icon: User, label: 'My Profile', action: handleOpenSettings },
     { icon: Settings, label: 'Account Settings', action: handleOpenSettings },
-    { icon: HelpCircle, label: 'Help & Support', action: handleHelpSupport },
   ];
 
   return (
