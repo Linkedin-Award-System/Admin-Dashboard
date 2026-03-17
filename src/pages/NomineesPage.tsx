@@ -6,11 +6,13 @@ import { DeleteNomineeDialog } from '@/features/nominees/components/DeleteNomine
 import type { Nominee } from '@/features/nominees/types';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/shared/design-system';
+import { useNavigate } from 'react-router-dom';
 
 export const NomineesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingNominee, setEditingNominee] = useState<Nominee | undefined>(undefined);
   const [deletingNominee, setDeletingNominee] = useState<Nominee | null>(null);
+  const navigate = useNavigate();
 
   const handleCreate = () => {
     setEditingNominee(undefined);
@@ -38,6 +40,10 @@ export const NomineesPage = () => {
 
   const handleDeleteSuccess = () => {
     setDeletingNominee(null);
+  };
+
+  const handleSelect = (nominee: Nominee) => {
+    navigate(`/nominees/${nominee.id}`);
   };
 
   return (
@@ -78,6 +84,7 @@ export const NomineesPage = () => {
             onCreate={handleCreate}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onSelect={handleSelect}
           />
         )}
 
