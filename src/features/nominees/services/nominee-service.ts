@@ -26,21 +26,23 @@ export const nomineeService = {
     const all = unwrapNominees(response);
     // Filter client-side if a categoryId is provided
     if (!categoryId) return all;
-    return all.filter((n) =>
-      n.categories?.some((c) =>
+    return all.filter((n) => {
+      // Check categories array (objects or strings)
+      if (n.categories?.some((c) =>
         typeof c === 'string' ? c === categoryId : c.id === categoryId
-      )
-    );
+      )) return true;
+      // Also check raw categoryIds field that some API responses include
+      const raw = n as unknown as Record<string, unknown>;
+      if (Array.isArray(raw['categoryIds'])) {
+        return (raw['categoryIds'] as string[]).includes(categoryId);
+      }
+      return false;
+    });
   },
 
   async getById(id: string): Promise<Nominee> {
-    // Backend doesn't support GET /admin/nominees/:id — fetch fresh list and find by id
-    const params: Record<string, string> = { limit: '500' };
-    const response = await apiClient.get<NomineesResponse | Nominee[]>('/admin/nominees', { params });
-    const all = unwrapNominees(response);
-    const found = all.find((n) => n.id === id);
-    if (!found) throw new Error('Nominee not found');
-    return found;
+    const response = await apiClient.get<Nominee>(`/admin/nominees/${id}`);
+    return response;
   },
 
   async create(data: NomineeFormData): Promise<Nominee> {
