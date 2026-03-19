@@ -22,12 +22,25 @@ interface NomineeListProps {
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 
+const LINKEDIN_CDN_HOSTNAMES = ['media.licdn.com', 'media-exp1.licdn.com', 'media-exp2.licdn.com', 'static.licdn.com'];
+
+function isLinkedInCdnUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return LINKEDIN_CDN_HOSTNAMES.some(h => parsed.hostname === h || parsed.hostname.endsWith('.' + h));
+  } catch {
+    return false;
+  }
+}
+
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('blob:')) return url;
   const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
   if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
-  if (url.startsWith('http://') || url.startsWith('https://')) return url; // pass through CDN URLs
+  // Route LinkedIn CDN URLs through the server-side proxy to avoid CORS issues on deployed site
+  if (isLinkedInCdnUrl(url)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
   if (url.startsWith('/')) return url;
   return `/uploads/${url}`;
 }

@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/fetch-image",
+      "destination": "/api/fetch-image"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/proxy"
     },

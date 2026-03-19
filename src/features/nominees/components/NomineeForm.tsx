@@ -17,6 +17,8 @@ function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('blob:')) return url;
   if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  // Route LinkedIn CDN URLs through the server-side proxy to avoid CORS issues on deployed site
+  if (isLinkedInCdnUrl(url)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
   return url;
 }
 
