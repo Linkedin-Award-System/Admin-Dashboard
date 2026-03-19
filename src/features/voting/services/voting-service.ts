@@ -46,14 +46,22 @@ export const votingService = {
     }
     
     const [votesResponse, categoriesResponse, nomineesResponse] = await Promise.all([
-      apiClient.get<VotesResponse>('/admin/votes', { params }),
-      apiClient.get<Category[]>('/admin/categories'),
-      apiClient.get<Nominee[]>('/admin/nominees'),
+      apiClient.get<VotesResponse | Vote[]>('/admin/votes', { params }),
+      apiClient.get<{ categories?: Category[] } | Category[]>('/admin/categories'),
+      apiClient.get<{ nominees?: Nominee[] } | Nominee[]>('/admin/nominees'),
     ]);
     
-    const votes = votesResponse.votes || [];
-    const categories = categoriesResponse || [];
-    const nominees = nomineesResponse || [];
+    // Defensive unwrap — API client strips the outer `data` wrapper, but the
+    // inner shape may vary (array directly, or { votes: [...] }, etc.)
+    const votes: Vote[] = Array.isArray(votesResponse)
+      ? votesResponse
+      : (votesResponse as VotesResponse).votes || [];
+    const categories: Category[] = Array.isArray(categoriesResponse)
+      ? categoriesResponse
+      : (categoriesResponse as { categories?: Category[] }).categories || [];
+    const nominees: Nominee[] = Array.isArray(nomineesResponse)
+      ? nomineesResponse
+      : (nomineesResponse as { nominees?: Nominee[] }).nominees || [];
     
     // Create category map
     const categoryMap = new Map(categories.map(cat => [cat.id, cat.name]));
@@ -128,36 +136,47 @@ export const votingService = {
   },
 
   async getTimeline(dateRange?: DateRange): Promise<VoteTimelineData[]> {
-    // Use /admin/votes and aggregate by date client-side
     const params: any = { limit: 1000 };
     if (dateRange) {
       params.startDate = dateRange.startDate;
       params.endDate = dateRange.endDate;
     }
-    
-    const response = await apiClient.get<VotesResponse>('/admin/votes', { params });
-    const votes = response.votes || [];
-    
-    // Aggregate votes by date
-    const dateMap = new Map<string, number>();
-    
+
+    const response = await apiClient.get<VotesResponse | Vote[]>('/admin/votes', { params });
+    const votes: Vote[] = Array.isArray(response)
+      ? response
+      : (response as VotesResponse).votes || [];
+
+    // Aggregate by date+category so per-category filtering works in the chart
+    // Key: "date|categoryId"
+    const map = new Map<string, { date: string; categoryId: string; count: number }>();
+
     votes.forEach(vote => {
       const date = new Date(vote.createdAt).toISOString().split('T')[0];
-      dateMap.set(date, (dateMap.get(date) || 0) + vote.quantity);
+      const key = `${date}|${vote.categoryId}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += vote.quantity;
+      } else {
+        map.set(key, { date, categoryId: vote.categoryId, count: vote.quantity });
+      }
     });
-    
-    return Array.from(dateMap.entries())
-      .map(([date, count]) => ({
+
+    return Array.from(map.values())
+      .map(({ date, categoryId, count }) => ({
         timestamp: date,
         voteCount: count,
+        categoryId,
       }))
       .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   },
 
   async getUniqueVoterCount(): Promise<number> {
     // Use /admin/votes and count unique userIds client-side
-    const response = await apiClient.get<VotesResponse>('/admin/votes', { params: { limit: 1000 } });
-    const votes = response.votes || [];
+    const response = await apiClient.get<VotesResponse | Vote[]>('/admin/votes', { params: { limit: 1000 } });
+    const votes: Vote[] = Array.isArray(response)
+      ? response
+      : (response as VotesResponse).votes || [];
     
     const uniqueUserIds = new Set(votes.map(vote => vote.userId));
     return uniqueUserIds.size;
@@ -168,13 +187,16 @@ export const votingService = {
     total: number;
     totalPages: number;
   }> {
-    // Fetch all votes for this nominee — filter client-side since backend may ignore nomineeId param
-    const response = await apiClient.get<VotesResponse>('/admin/votes', {
-      params: { nomineeId, limit: 1000 },
+    // Backend filters by nomineeId; fetch the requested page directly
+    const response = await apiClient.get<VotesResponse | Vote[]>('/admin/votes', {
+      params: { nomineeId, page, limit },
     });
-    const allVotes = (response.votes || []).filter((v) => v.nomineeId === nomineeId);
+    const allVotes: Vote[] = Array.isArray(response)
+      ? response
+      : (response as VotesResponse).votes || [];
+    const paginationData = Array.isArray(response) ? undefined : (response as VotesResponse).pagination;
 
-    // Aggregate by userId — sum quantities
+    // Aggregate by userId — sum quantities for this page
     const voterMap = new Map<string, { userId: string; quantity: number; type: string; createdAt: string }>();
     allVotes.forEach(vote => {
       const existing = voterMap.get(vote.userId);
@@ -190,13 +212,12 @@ export const votingService = {
       }
     });
 
-    const allVoters = Array.from(voterMap.values()).sort(
+    const voters = Array.from(voterMap.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    const total = allVoters.length;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-    const voters = allVoters.slice((page - 1) * limit, page * limit);
+    const total = paginationData?.total ?? voters.length;
+    const totalPages = paginationData?.totalPages ?? Math.max(1, Math.ceil(total / limit));
 
     return { voters, total, totalPages };
   },
