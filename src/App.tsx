@@ -23,6 +23,7 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const NomineeDetailPage = lazy(() => import('@/pages/NomineeDetailPage'));
+const VotersPage = lazy(() => import('@/pages/VotersPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +94,14 @@ function AppRoutes() {
             element={
               <AuthGuard>
                 <NomineeDetailPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/voters"
+            element={
+              <AuthGuard>
+                <VotersPage />
               </AuthGuard>
             }
           />
