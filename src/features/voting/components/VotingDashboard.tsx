@@ -13,11 +13,13 @@ import {
   Target,
   Medal,
   AlertCircle,
+  Search,
+  X,
 } from 'lucide-react';
 import { formatNumber } from '@/features/dashboard/utils/format-utils';
 import { useNavigate } from 'react-router-dom';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 25;
 
 interface VotingDashboardProps {
   dateRange?: DateRange;
@@ -27,20 +29,36 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
   const { data: voteStats, isLoading, error } = useVoteStats(dateRange);
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
 
   const totalVotes = useMemo(
     () => voteStats?.reduce((sum, stat) => sum + stat.totalVotes, 0) || 0,
     [voteStats]
   );
 
-  // Sort categories by total votes descending for the leaderboard
   const sortedStats = useMemo(
     () => [...(voteStats ?? [])].sort((a, b) => b.totalVotes - a.totalVotes),
     [voteStats]
   );
 
-  const totalPages = Math.max(1, Math.ceil(sortedStats.length / PAGE_SIZE));
-  const pagedStats = sortedStats.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filteredStats = useMemo(() => {
+    if (!search.trim()) return sortedStats;
+    const q = search.toLowerCase();
+    return sortedStats.filter(
+      (s) =>
+        s.categoryName.toLowerCase().includes(q) ||
+        (s.leadingNominee.name ?? '').toLowerCase().includes(q)
+    );
+  }, [sortedStats, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStats.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedStats = filteredStats.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
 
   if (isLoading) return <VotingDashboardSkeleton />;
 
@@ -73,46 +91,79 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
           </div>
         </div>
 
-        <ExportButton
-          onExport={(format) => exportService.exportVoteStats(format, voteStats ?? [])}
-          filename={`vote-stats${dateRange ? `-${dateRange.startDate}-${dateRange.endDate}` : ''}`}
-          label="Export Results"
-          className="rounded-xl h-10 px-5 text-sm border-gray-200 hover:bg-gray-50 transition-all"
-        />
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+            <input
+              type="text"
+              placeholder="Search categories or nominees…"
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="h-9 pl-9 pr-8 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all w-52"
+            />
+            {search && (
+              <button
+                onClick={() => handleSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <ExportButton
+            onExport={(format) => exportService.exportVoteStats(format, voteStats ?? [])}
+            filename={`vote-stats${dateRange ? `-${dateRange.startDate}-${dateRange.endDate}` : ''}`}
+            label="Export Results"
+            className="rounded-xl h-9 px-4 text-sm border-gray-200 hover:bg-gray-50 transition-all"
+          />
+        </div>
       </div>
 
       {/* Body */}
-      {sortedStats.length === 0 ? (
+      {filteredStats.length === 0 ? (
         <div className="py-20 text-center">
           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <Target className="text-gray-300" size={32} />
           </div>
-          <p className="text-gray-400 font-medium">No votes recorded yet</p>
-          <p className="text-gray-300 text-sm mt-1">Results will appear once voting begins</p>
+          <p className="text-gray-400 font-medium">
+            {search ? 'No results match your search' : 'No votes recorded yet'}
+          </p>
+          <p className="text-gray-300 text-sm mt-1">
+            {search ? 'Try a different search term' : 'Results will appear once voting begins'}
+          </p>
+          {search && (
+            <button
+              onClick={() => handleSearch('')}
+              className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Clear search
+            </button>
+          )}
         </div>
       ) : (
         <>
           <div className="divide-y divide-gray-50">
             {pagedStats.map((stat, index) => {
-              const globalIndex = (page - 1) * PAGE_SIZE + index;
+              const globalIndex = (safePage - 1) * PAGE_SIZE + index;
               const rankColors = ['text-yellow-500', 'text-gray-400', 'text-amber-600'];
               const rankBg = ['bg-yellow-50', 'bg-gray-50', 'bg-amber-50'];
               const isTop3 = globalIndex < 3;
+              const nomineeId = stat.leadingNominee.id?.trim();
 
               return (
                 <div
                   key={stat.categoryId}
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between px-8 py-5 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                  className={`group flex flex-col sm:flex-row sm:items-center justify-between px-8 py-5 hover:bg-gray-50/60 transition-colors ${nomineeId ? 'cursor-pointer' : 'cursor-default'}`}
                   onClick={() => {
-                    if (stat.leadingNominee.id) {
-                      navigate(`/nominees/${stat.leadingNominee.id}`);
-                    }
+                    if (nomineeId) navigate(`/nominees/${nomineeId}`, { state: { backLabel: 'Back to Voting Hub' } });
                   }}
-                  role="button"
-                  tabIndex={0}
+                  role={nomineeId ? 'button' : undefined}
+                  tabIndex={nomineeId ? 0 : undefined}
                   onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && stat.leadingNominee.id) {
-                      navigate(`/nominees/${stat.leadingNominee.id}`);
+                    if ((e.key === 'Enter' || e.key === ' ') && nomineeId) {
+                      navigate(`/nominees/${nomineeId}`, { state: { backLabel: 'Back to Voting Hub' } });
                     }
                   }}
                 >
@@ -123,7 +174,7 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
                     </div>
                     <div>
                       <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{stat.categoryName}</p>
-                      <p className="text-sm font-semibold text-gray-900 mt-0.5 group-hover:text-blue-700 transition-colors">
+                      <p className={`text-sm font-semibold text-gray-900 mt-0.5 transition-colors ${nomineeId ? 'group-hover:text-blue-700' : ''}`}>
                         {stat.leadingNominee.name || 'No nominees yet'}
                       </p>
                     </div>
@@ -162,7 +213,9 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
                       </p>
                     </div>
 
-                    <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                    {nomineeId && (
+                      <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                    )}
                   </div>
                 </div>
               );
@@ -173,20 +226,21 @@ export const VotingDashboard = ({ dateRange }: VotingDashboardProps) => {
           {totalPages > 1 && (
             <div className="px-8 py-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-gray-400">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedStats.length)} of {sortedStats.length} categories
+                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredStats.length)} of {filteredStats.length} categories
+                {search && <span className="ml-1 text-blue-500">(filtered)</span>}
               </p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
+                  disabled={safePage === 1}
                   className="h-8 w-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft size={14} />
                 </button>
-                <span className="text-sm font-medium text-gray-600">{page} / {totalPages}</span>
+                <span className="text-sm font-medium text-gray-600">{safePage} / {totalPages}</span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  disabled={safePage === totalPages}
                   className="h-8 w-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight size={14} />
