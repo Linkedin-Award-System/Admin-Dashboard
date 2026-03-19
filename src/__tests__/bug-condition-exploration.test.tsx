@@ -322,3 +322,186 @@ describe('Password toggle bug', () => {
     expect(toggleButton).not.toBeNull();
   });
 });
+
+
+// ===========================================================================
+// API Integration Update — Bug Condition Exploration Tests
+//
+// **Validates: Requirements 1.1, 1.2, 1.3, 1.7, 1.10**
+//
+// These tests MUST FAIL on unfixed code — failure confirms each bug exists.
+// DO NOT attempt to fix the tests or the code when they fail.
+// After the bugs are fixed, the assertions will be inverted/updated to pass.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Mocks for api-integration-update bug tests
+// ---------------------------------------------------------------------------
+
+vi.mock('@/lib/api-client-instance', () => ({
+  apiClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Imports for api-integration-update bug tests
+// ---------------------------------------------------------------------------
+
+import { apiClient as apiClientMock } from '@/lib/api-client-instance';
+import { authService } from '@/features/auth/services/auth-service';
+import { nomineeService } from '@/features/nominees/services/nominee-service';
+import { creditService } from '@/features/credits/services/credit-service';
+import { voterService } from '@/features/voters/services/voter-service';
+import type { Mock as MockType } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Bug 1 — authService.forgotPassword calls wrong URL
+// Bug condition: calls /admin/auth/forgot-password (404)
+// Expected (correct): POST /admin/auth/password-reset/request
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — Bug 1: forgotPassword wrong URL', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (apiClientMock.post as MockType).mockResolvedValue(undefined);
+  });
+
+  it('FIXED: forgotPassword calls /admin/auth/password-reset/request (correct URL)', async () => {
+    // Bug was: authService.forgotPassword called /admin/auth/forgot-password
+    // Fixed behavior: should call /admin/auth/password-reset/request
+    await authService.forgotPassword('x@x.com');
+
+    // Assert the CORRECT behavior — bug is fixed
+    expect(apiClientMock.post).toHaveBeenCalledWith(
+      '/admin/auth/password-reset/request',
+      { email: 'x@x.com' }
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug 2 — nomineeService.getById fetches all nominees instead of direct GET
+// Bug condition: calls /admin/nominees (fetches all, filters client-side)
+// Expected (correct): GET /admin/nominees/:id
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — Bug 2: nomineeService.getById fetches all', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock the direct endpoint response (fixed code calls /admin/nominees/:id)
+    (apiClientMock.get as MockType).mockResolvedValue(
+      { id: 'abc123', fullName: 'Test Nominee', voteCount: 0, categories: [] },
+    );
+  });
+
+  it('FIXED: getById calls /admin/nominees/abc123 (direct endpoint)', async () => {
+    // Bug was: getById fetched all nominees via /admin/nominees?limit=500
+    // Fixed behavior: should call /admin/nominees/abc123 directly
+    await nomineeService.getById('abc123');
+
+    const calls = (apiClientMock.get as MockType).mock.calls;
+    const urls = calls.map((c: unknown[]) => c[0] as string);
+
+    // Fixed: the direct endpoint /admin/nominees/abc123 IS called
+    expect(urls.some((u: string) => u === '/admin/nominees/abc123')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug 3 — creditService.create now calls POST /admin/credit-packages
+// Bug condition was: createLocal() returned a local object, never called apiClient.post
+// Expected (correct): POST /admin/credit-packages
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — Bug 3: creditService.createLocal no HTTP call', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (apiClientMock.post as MockType).mockResolvedValue({ id: 'new-1', name: 'Test', credits: 10, price: 50 });
+  });
+
+  it('FIXED: creditService.create calls POST /admin/credit-packages', async () => {
+    // After fix: creditService.create() calls POST /admin/credit-packages
+    await creditService.create({ name: 'Test', credits: 10, price: 50 });
+
+    // Assert the CORRECT behavior — apiClient.post IS called with the right endpoint
+    expect(apiClientMock.post).toHaveBeenCalledWith(
+      '/admin/credit-packages',
+      { name: 'Test', credits: 10, price: 50 }
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug 4 — voterService.getAll calls /admin/votes (wrong endpoint)
+// Bug condition: parallel fetches /admin/votes, /admin/nominees, /admin/categories
+// Expected (correct): GET /admin/voters
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — Bug 4: voterService.getAll uses wrong endpoint', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock the correct /admin/voters endpoint (fixed code calls this)
+    (apiClientMock.get as MockType).mockImplementation((url: string) => {
+      if (url === '/admin/voters') {
+        return Promise.resolve({ voters: [], total: 0, totalPages: 1 });
+      }
+      return Promise.resolve([]);
+    });
+  });
+
+  it('FIXED: voterService.getAll calls /admin/voters (correct endpoint)', async () => {
+    // After fix: getAll() calls GET /admin/voters with page/limit params
+    // Expected (correct) behavior: single call to /admin/voters, NOT /admin/votes
+    await voterService.getAll();
+
+    const calls = (apiClientMock.get as MockType).mock.calls;
+    const urls = calls.map((c: unknown[]) => c[0] as string);
+
+    // Fixed: /admin/voters IS called (correct endpoint)
+    expect(urls.some((u: string) => u === '/admin/voters')).toBe(true);
+    // Fixed: /admin/votes is NOT called (wrong endpoint no longer used)
+    expect(urls.some((u: string) => u.includes('/admin/votes') && !u.includes('/admin/voters'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug 5 — uploadService.uploadImage sends wrong bucket value
+// Bug condition: sends bucket=NOMINEES (not recognised by backend)
+// Expected (correct): bucket=NOMINEE_PROFILE
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — Bug 5: uploadService sends wrong bucket value', () => {
+  let capturedFormData: FormData | null = null;
+
+  beforeEach(() => {
+    capturedFormData = null;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, options: RequestInit) => {
+      capturedFormData = options.body as FormData;
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: { url: 'https://cdn.example.com/img.jpg', filename: 'img.jpg', size: 1024, mimeType: 'image/jpeg' } }),
+      });
+    }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('FIXED: uploadImage sends bucket=NOMINEE_PROFILE (correct value)', async () => {
+    // After fix: uploadService.uploadImage(file, 'NOMINEE_PROFILE') sends bucket=NOMINEE_PROFILE
+    // Expected (correct) behavior: bucket=NOMINEE_PROFILE is sent to the backend
+    const { uploadService } = await import('@/features/uploads/services/upload-service');
+
+    const mockFile = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
+    await uploadService.uploadImage(mockFile, 'NOMINEE_PROFILE');
+
+    expect(capturedFormData).not.toBeNull();
+    // Fixed: FormData contains the correct bucket value
+    expect(capturedFormData!.get('bucket')).toBe('NOMINEE_PROFILE');
+  });
+});

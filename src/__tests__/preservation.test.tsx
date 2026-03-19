@@ -64,6 +64,7 @@ import { uploadService } from '@/features/uploads/services/upload-service';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { ImageManager } from '@/features/content/components/ImageManager';
 import { SettingsModal } from '@/shared/components/layout/SettingsModal';
+import { ThemeProvider } from '@/shared/hooks/use-theme';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/features/categories/hooks/use-categories';
 import { useNominees, useCreateNominee, useUpdateNominee, useDeleteNominee } from '@/features/nominees/hooks/use-nominees';
 import { usePayments } from '@/features/payments/hooks/use-payments';
@@ -113,7 +114,7 @@ describe('Auth preservation', () => {
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: 'admin@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'password123' },
     });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
@@ -141,7 +142,7 @@ describe('Auth preservation', () => {
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: 'wrong@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'wrongpassword' },
     });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
@@ -283,7 +284,7 @@ describe('useNominees hook preservation', () => {
       expect(screen.getByTestId('count').textContent).toBe('2');
     });
 
-    expect(apiClient.get).toHaveBeenCalledWith('/admin/nominees');
+    expect(apiClient.get).toHaveBeenCalledWith('/admin/nominees', expect.any(Object));
   });
 
   it('3.6 — useCreateNominee calls POST /admin/nominees', async () => {
@@ -506,10 +507,24 @@ describe('SettingsModal handleSave preservation', () => {
     vi.clearAllMocks();
     // createPortal needs document.body
     document.body.innerHTML = '';
+    // jsdom does not implement matchMedia — stub it
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
   it('3.10 — SettingsModal renders profile panel by default', () => {
-    render(React.createElement(SettingsModal, { isOpen: true, onClose: vi.fn() }));
+    render(React.createElement(ThemeProvider, {}, React.createElement(SettingsModal, { isOpen: true, onClose: vi.fn() })));
 
     // Profile panel should be visible by default
     expect(screen.getByText(/first name/i)).toBeTruthy();
@@ -518,7 +533,7 @@ describe('SettingsModal handleSave preservation', () => {
 
   it('3.10 — SettingsModal Save Changes button is present and clickable', () => {
     const onClose = vi.fn();
-    render(React.createElement(SettingsModal, { isOpen: true, onClose }));
+    render(React.createElement(ThemeProvider, {}, React.createElement(SettingsModal, { isOpen: true, onClose })));
 
     const saveButton = screen.getByRole('button', { name: /save changes/i });
     expect(saveButton).toBeTruthy();
@@ -531,7 +546,7 @@ describe('SettingsModal handleSave preservation', () => {
   });
 
   it('3.10 — SettingsModal notifications panel is accessible', () => {
-    render(React.createElement(SettingsModal, { isOpen: true, onClose: vi.fn() }));
+    render(React.createElement(ThemeProvider, {}, React.createElement(SettingsModal, { isOpen: true, onClose: vi.fn() })));
 
     const notificationsTab = screen.getByRole('button', { name: /notifications/i });
     fireEvent.click(notificationsTab);
@@ -540,19 +555,200 @@ describe('SettingsModal handleSave preservation', () => {
     expect(screen.getByText(/push notifications/i)).toBeTruthy();
   });
 
-  it('3.10 — SettingsModal language panel is accessible', () => {
-    render(React.createElement(SettingsModal, { isOpen: true, onClose: vi.fn() }));
+  it('3.10 — SettingsModal appearance panel is accessible', () => {
+    render(React.createElement(ThemeProvider, {}, React.createElement(SettingsModal, { isOpen: true, onClose: vi.fn() })));
 
-    const languageTab = screen.getByRole('button', { name: /language/i });
-    fireEvent.click(languageTab);
+    const appearanceTab = screen.getByRole('button', { name: /appearance/i });
+    fireEvent.click(appearanceTab);
 
-    expect(screen.getByText(/display language/i)).toBeTruthy();
-    expect(screen.getByText(/timezone/i)).toBeTruthy();
+    expect(screen.getByText(/theme/i)).toBeTruthy();
   });
 
   it('3.10 — SettingsModal does not render when isOpen is false', () => {
-    render(React.createElement(SettingsModal, { isOpen: false, onClose: vi.fn() }));
+    render(React.createElement(ThemeProvider, {}, React.createElement(SettingsModal, { isOpen: false, onClose: vi.fn() })));
 
     expect(screen.queryByText(/account settings/i)).toBeNull();
+  });
+});
+
+
+// ===========================================================================
+// API Integration Update — Preservation Property Tests
+//
+// **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8**
+//
+// These tests verify that service calls NOT in the bug condition continue to
+// behave exactly as before. They PASS on both unfixed and fixed code.
+//
+// EXPECTED OUTCOME: All tests PASS (confirms baseline behavior to preserve).
+// ===========================================================================
+
+import { authService } from '@/features/auth/services/auth-service';
+import { nomineeService } from '@/features/nominees/services/nominee-service';
+import * as fc from 'fast-check';
+
+// ---------------------------------------------------------------------------
+// Suite A — authService preservation
+// Requirements: 3.1, 3.8
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — authService preservation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Stub localStorage for token storage
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn().mockReturnValue(null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('3.1 — authService.login calls POST /admin/auth/login', async () => {
+    (apiClient.post as Mock).mockResolvedValue({ user: { id: 'u1', email: 'admin@example.com', role: 'ADMIN' }, token: 'tok123' });
+
+    await authService.login({ email: 'admin@example.com', password: 'pass' });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/admin/auth/login',
+      { email: 'admin@example.com', password: 'pass' }
+    );
+  });
+
+  it('3.8 — authService.getProfile calls GET /admin/auth/me', async () => {
+    (apiClient.get as Mock).mockResolvedValue({ id: 'u1', email: 'admin@example.com', role: 'ADMIN' });
+
+    await authService.getProfile();
+
+    expect(apiClient.get).toHaveBeenCalledWith('/admin/auth/me');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite B — nomineeService preservation
+// Requirements: 3.2, 3.3
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — nomineeService preservation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('3.2 — nomineeService.getAll calls GET /admin/nominees', async () => {
+    (apiClient.get as Mock).mockResolvedValue([
+      { id: 'n1', fullName: 'Alice', voteCount: 0, categories: [] },
+    ]);
+
+    await nomineeService.getAll();
+
+    const calls = (apiClient.get as Mock).mock.calls;
+    const urls = calls.map((c: unknown[]) => c[0] as string);
+    expect(urls.some((u: string) => u === '/admin/nominees')).toBe(true);
+  });
+
+  it('3.3 — nomineeService.create calls POST /admin/nominees', async () => {
+    const data = { fullName: 'Bob', categoryIds: ['cat-1'], organization: 'Org', bio: '', profileImage: '' };
+    (apiClient.post as Mock).mockResolvedValue({ id: 'n2', ...data, voteCount: 0 });
+
+    await nomineeService.create(data);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/admin/nominees', data);
+  });
+
+  it('3.3 — nomineeService.update calls PATCH /admin/nominees/:id', async () => {
+    const data = { fullName: 'Bob Updated', categoryIds: ['cat-1'], organization: 'Org', bio: '', profileImage: '' };
+    (apiClient.patch as Mock).mockResolvedValue({ id: 'n2', ...data, voteCount: 0 });
+
+    await nomineeService.update('n2', data);
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/admin/nominees/n2', data);
+  });
+
+  it('3.3 — nomineeService.delete calls DELETE /admin/nominees/:id', async () => {
+    (apiClient.delete as Mock).mockResolvedValue(undefined);
+
+    await nomineeService.delete('n2');
+
+    expect(apiClient.delete).toHaveBeenCalledWith('/admin/nominees/n2');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite C — uploadService bucket preservation (GENERAL and CATEGORY_IMAGE)
+// Requirements: 3.5
+// ---------------------------------------------------------------------------
+
+describe('API Integration Update — uploadService bucket preservation', () => {
+  let capturedFormData: FormData | null = null;
+
+  beforeEach(() => {
+    capturedFormData = null;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, options: RequestInit) => {
+      capturedFormData = options.body as FormData;
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          data: { url: 'https://cdn.example.com/img.jpg', filename: 'img.jpg', size: 1024, mimeType: 'image/jpeg' },
+        }),
+      });
+    }));
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn().mockReturnValue('test-token'),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('3.5 — uploadService.uploadImage with GENERAL sends bucket=GENERAL', async () => {
+    const { uploadService: svc } = await vi.importActual<typeof import('@/features/uploads/services/upload-service')>('@/features/uploads/services/upload-service');
+    const mockFile = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
+
+    await svc.uploadImage(mockFile, 'GENERAL');
+
+    expect(capturedFormData).not.toBeNull();
+    expect(capturedFormData!.get('bucket')).toBe('GENERAL');
+  });
+
+  it('3.5 — uploadService.uploadImage with CATEGORY_IMAGE sends bucket=CATEGORY_IMAGE', async () => {
+    const { uploadService: svc } = await vi.importActual<typeof import('@/features/uploads/services/upload-service')>('@/features/uploads/services/upload-service');
+    const mockFile = new File(['img'], 'category.jpg', { type: 'image/jpeg' });
+
+    await svc.uploadImage(mockFile, 'CATEGORY_IMAGE');
+
+    expect(capturedFormData).not.toBeNull();
+    expect(capturedFormData!.get('bucket')).toBe('CATEGORY_IMAGE');
+  });
+
+  it('3.5 — Property: for all non-buggy bucket values, the value is sent verbatim in FormData', async () => {
+    /**
+     * **Validates: Requirements 3.5**
+     *
+     * Property: for all bucket values in {GENERAL, CATEGORY_IMAGE},
+     * uploadService.uploadImage sends that exact value in FormData.
+     * These are the preserved (non-buggy) bucket values.
+     */
+    const { uploadService: svc } = await vi.importActual<typeof import('@/features/uploads/services/upload-service')>('@/features/uploads/services/upload-service');
+
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constantFrom('GENERAL' as const, 'CATEGORY_IMAGE' as const),
+        async (bucket) => {
+          capturedFormData = null;
+          const mockFile = new File(['img'], 'test.jpg', { type: 'image/jpeg' });
+
+          await svc.uploadImage(mockFile, bucket);
+
+          expect(capturedFormData).not.toBeNull();
+          expect(capturedFormData!.get('bucket')).toBe(bucket);
+        }
+      )
+    );
   });
 });
