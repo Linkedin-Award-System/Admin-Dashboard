@@ -21,12 +21,21 @@ interface NomineeListProps {
 }
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
-const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
 
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  if (url.startsWith('http')) return url;
-  return `${RAILWAY_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+  // Already absolute (e.g. blob: preview or full https URL from a CDN)
+  if (url.startsWith('blob:')) return url;
+  // Already a full URL pointing to Railway — rewrite to relative so the
+  // Vite proxy (and production reverse-proxy) handles it same-origin
+  const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
+  if (url.startsWith(RAILWAY_BASE)) {
+    return url.slice(RAILWAY_BASE.length); // e.g. /uploads/image.jpg
+  }
+  // Already relative (e.g. /uploads/image.jpg)
+  if (url.startsWith('/')) return url;
+  // Bare filename — assume it lives under /uploads/
+  return `/uploads/${url}`;
 }
 
 const NomineeAvatar = ({ nominee }: { nominee: Nominee }) => {
