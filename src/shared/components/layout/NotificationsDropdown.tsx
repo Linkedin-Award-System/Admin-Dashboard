@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, X, Check, UserPlus, CreditCard, Vote, AlertCircle, Clock } from 'lucide-react';
+import { Bell, X, Check, UserPlus, CreditCard, Vote, AlertCircle, Clock, Trash2 } from 'lucide-react';
+import { apiClient } from '@/lib/api-client-instance';
 
 interface Notification {
   id: string;
@@ -9,41 +10,6 @@ interface Notification {
   time: string;
   read: boolean;
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'nominee',
-    title: 'New Nominee Submission',
-    message: 'John Doe submitted a nomination for Content Creation category',
-    time: '5 min ago',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'Payment of ETB 50 received from Jane Smith',
-    time: '1 hr ago',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'voting',
-    title: 'Voting Period Started',
-    message: 'Public voting is now open for all categories',
-    time: '2 hrs ago',
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'System Update',
-    message: 'Platform maintenance scheduled for tonight at 11 PM',
-    time: '3 hrs ago',
-    read: true,
-  },
-];
 
 const TYPE_CONFIG = {
   nominee: {
@@ -78,9 +44,34 @@ interface NotificationsDropdownProps {
 }
 
 export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdownProps) {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    apiClient.get<Notification[]>('/admin/notifications')
+      .then((data) => {
+        if (!cancelled) setNotifications(data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load notifications');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isOpen]);
+
+  // Close on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -91,11 +82,38 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
 
-  const markAsRead = (id: string) =>
+  const markAsRead = async (id: string) => {
+    // Optimistic update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      await apiClient.patch(`/admin/notifications/${id}/read`);
+    } catch {
+      // Revert on failure
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
+    }
+  };
 
-  const markAllAsRead = () =>
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    const prev = notifications;
+    // Optimistic update
+    setNotifications(p => p.map(n => ({ ...n, read: true })));
+    try {
+      await apiClient.post('/admin/notifications/read-all');
+    } catch {
+      setNotifications(prev);
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    const prev = notifications;
+    // Optimistic removal
+    setNotifications(p => p.filter(n => n.id !== id));
+    try {
+      await apiClient.delete(`/admin/notifications/${id}`);
+    } catch {
+      setNotifications(prev);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -124,6 +142,8 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         .notif-item:hover { background: #f8fafc !important; }
+        .notif-delete-btn { opacity: 0; transition: opacity 0.15s; }
+        .notif-item:hover .notif-delete-btn { opacity: 1; }
       `}</style>
 
       {/* Header */}
@@ -157,7 +177,7 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                 Notifications
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2, fontWeight: 500 }}>
-                {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+                {loading ? 'Loading…' : unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
               </div>
             </div>
           </div>
@@ -204,7 +224,15 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
 
       {/* Notification list */}
       <div style={{ maxHeight: 380, overflowY: 'auto' }}>
-        {notifications.length === 0 ? (
+        {loading ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+            <p style={{ color: '#64748b', fontSize: 14 }}>Loading notifications…</p>
+          </div>
+        ) : error ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+            <p style={{ color: '#ef4444', fontSize: 14, fontWeight: 600 }}>{error}</p>
+          </div>
+        ) : notifications.length === 0 ? (
           <div style={{ padding: '48px 20px', textAlign: 'center' }}>
             <div style={{
               width: 56, height: 56, borderRadius: 16,
@@ -219,7 +247,7 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
           </div>
         ) : (
           notifications.map((n, idx) => {
-            const cfg = TYPE_CONFIG[n.type];
+            const cfg = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.system;
             const Icon = cfg.icon;
 
             return (
@@ -273,15 +301,32 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                     }}>
                       {n.title}
                     </span>
-                    {!n.read && (
-                      <div style={{
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: cfg.dot,
-                        flexShrink: 0,
-                        marginTop: 3,
-                        boxShadow: `0 0 6px ${cfg.dot}88`,
-                      }} />
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {!n.read && (
+                        <div style={{
+                          width: 8, height: 8, borderRadius: '50%',
+                          background: cfg.dot,
+                          boxShadow: `0 0 6px ${cfg.dot}88`,
+                        }} />
+                      )}
+                      <button
+                        className="notif-delete-btn"
+                        onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
+                        style={{
+                          width: 22, height: 22, borderRadius: 6, border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#94a3b8',
+                          padding: 0,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
+                        aria-label="Delete notification"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                   <p style={{
                     fontSize: 12,
