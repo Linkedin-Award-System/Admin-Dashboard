@@ -13,8 +13,11 @@ import { Upload, X, User } from 'lucide-react';
 const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
 function resolveImageUrl(url?: string): string {
   if (!url) return '';
-  if (url.startsWith('http') || url.startsWith('blob:')) return url;
-  return `${RAILWAY_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (url.startsWith('blob:')) return url;
+  // Rewrite absolute Railway URLs to relative so the proxy handles them
+  if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  if (url.startsWith('/')) return url;
+  return `/uploads/${url}`;
 }
 
 interface NomineeFormProps {
@@ -122,7 +125,7 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
         try {
           setImageUploading(true);
           setUploadFailed(false);
-          const result = await uploadService.uploadImage(pendingFile, 'NOMINEES');
+          const result = await uploadService.uploadImage(pendingFile, 'NOMINEE_PROFILE');
           finalImageUrl = result.url;
         } catch {
           // Upload failed — preserve the existing image URL if there was one
