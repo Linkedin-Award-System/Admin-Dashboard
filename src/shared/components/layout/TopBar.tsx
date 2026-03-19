@@ -3,6 +3,7 @@ import { useAuthStore } from '@/features/auth';
 import { useState } from 'react';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { SettingsModal } from './SettingsModal';
+import type { PanelId } from './SettingsModal';
 import { ProfileDropdown } from './ProfileDropdown';
 
 interface TopBarProps {
@@ -14,6 +15,17 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [settingsInitialPanel, setSettingsInitialPanel] = useState<PanelId>('profile');
+
+  const handleOpenProfile = () => {
+    setSettingsInitialPanel('profile');
+    setShowSettings(true);
+  };
+
+  const handleOpenSettings = () => {
+    setSettingsInitialPanel('security');
+    setShowSettings(true);
+  };
 
   return (
     <>
@@ -87,7 +99,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
             <ProfileDropdown 
               isOpen={showProfile} 
               onClose={() => setShowProfile(false)}
-              onOpenSettings={() => { setShowProfile(false); setShowSettings(true); }}
+              onOpenProfile={handleOpenProfile}
+              onOpenSettings={handleOpenSettings}
             />
           </div>
         </div>
@@ -99,6 +112,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+        initialPanel={settingsInitialPanel}
       />
     </>
   );

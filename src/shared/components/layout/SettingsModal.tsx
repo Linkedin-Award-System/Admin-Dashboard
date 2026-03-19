@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Bell, Shield, Palette, Eye, EyeOff, Check, Camera, Coins } from 'lucide-react';
+import { X, User, Bell, Shield, Palette, Eye, EyeOff, Check, Camera, Coins, ChevronLeft } from 'lucide-react';
 import { useTheme } from '@/shared/hooks/use-theme';
 import type { ThemeMode } from '@/shared/hooks/use-theme';
+
+export type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'credits';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPanel?: PanelId;
 }
-
-type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'credits';
 
 interface NavItem {
   id: PanelId;
@@ -32,22 +33,30 @@ function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
   return (
     <button
       onClick={onChange}
-      className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none shadow-inner ${value ? 'bg-blue-600' : 'bg-gray-300'}`}
+      className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none shadow-inner shrink-0 ${value ? 'bg-blue-600' : 'bg-gray-300'}`}
     >
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${value ? 'translate-x-6' : 'translate-x-0'}`} />
     </button>
   );
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [active, setActive] = useState<PanelId>('profile');
+export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalProps) {
+  const [active, setActive] = useState<PanelId>(initialPanel ?? 'profile');
+
+  // Sync active panel whenever the modal opens with a new initialPanel
+  useEffect(() => {
+    if (isOpen) {
+      setActive(initialPanel ?? 'profile');
+    }
+  }, [isOpen, initialPanel]);
+  // On mobile, track whether we're showing the nav list or the panel content
+  const [mobileView, setMobileView] = useState<'nav' | 'panel'>('nav');
   const [showPw, setShowPw] = useState(false);
   const { theme, setTheme } = useTheme();
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifPush, setNotifPush] = useState(true);
   const [notifSms, setNotifSms] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Credits state
   const [freeVotePoints, setFreeVotePoints] = useState('10');
   const [premiumVotePoints, setPremiumVotePoints] = useState('50');
   const [basicPackagePrice, setBasicPackagePrice] = useState('9.99');
@@ -58,6 +67,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 1500);
+  };
+
+  const handleNavSelect = (id: PanelId) => {
+    setActive(id);
+    setMobileView('panel');
   };
 
   const inp = 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-400';
@@ -75,14 +89,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const profilePanel = (
     <div className="space-y-5">
-      <div className="flex items-center gap-5 p-6 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-5 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white">
         <div className="relative shrink-0">
           <div className="w-20 h-20 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center text-3xl font-black border-2 border-white/30 shadow-xl">C</div>
           <button className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
             <Camera size={13} className="text-blue-700" />
           </button>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 text-center sm:text-left">
           <p className="text-xl font-black tracking-tight">Commander</p>
           <p className="text-blue-200 text-sm mt-0.5">admin@awards.com</p>
           <span className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-xs font-bold border border-white/20">
@@ -91,7 +105,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </span>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">First Name</label>
           <input className={inp} defaultValue="Commander" />
@@ -124,11 +138,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         { label: 'Push Notifications',  desc: 'Browser push alerts',          dot: 'bg-amber-500', value: notifPush, set: () => setNotifPush(v => !v) },
         { label: 'SMS Notifications',   desc: 'Critical alerts via SMS',      dot: 'bg-red-500',   value: notifSms,  set: () => setNotifSms(v => !v) },
       ].map(item => (
-        <div key={item.label} className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 bg-white hover:border-gray-200 transition-all">
-          <div className="flex items-center gap-3">
+        <div key={item.label} className="flex items-center justify-between gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-white hover:border-gray-200 transition-all">
+          <div className="flex items-center gap-3 min-w-0">
             <span className={`w-2.5 h-2.5 rounded-full ${item.dot} shrink-0`} />
-            <div>
-              <p className="text-sm font-bold text-gray-800">{item.label}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-800 truncate">{item.label}</p>
               <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
             </div>
           </div>
@@ -136,10 +150,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
       ))}
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-6 mb-3">Alert Types</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {['New nominations', 'Payment updates', 'Voting milestones', 'System alerts'].map(item => (
           <label key={item} className="flex items-center gap-3 p-3.5 rounded-xl border-2 border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all group">
-            <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500" />
+            <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 shrink-0" />
             <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">{item}</span>
           </label>
         ))}
@@ -149,13 +163,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const securityPanel = (
     <div className="space-y-5">
-      <div className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-200">
+      <div className="flex items-start gap-4 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-200">
         <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
           <Shield size={18} className="text-emerald-600" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-bold text-emerald-800">Account is secure</p>
-          <p className="text-xs text-emerald-600 mt-0.5">Last login: Today at 09:41 AM · Chrome on Windows</p>
+          <p className="text-xs text-emerald-600 mt-0.5 break-words">Last login: Today at 09:41 AM · Chrome on Windows</p>
         </div>
       </div>
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Change Password</p>
@@ -187,16 +201,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Theme</p>
         <div className="grid grid-cols-3 gap-3">
           {([
-            { value: 'light'  as ThemeMode, label: 'Light',  preview: 'bg-white',                          border: 'border-gray-200' },
+            { value: 'light'  as ThemeMode, label: 'Light',  preview: 'bg-white',                                    border: 'border-gray-200' },
             { value: 'dark'   as ThemeMode, label: 'Dark',   preview: 'bg-gradient-to-br from-gray-800 to-gray-900', border: 'border-gray-400' },
             { value: 'system' as ThemeMode, label: 'System', preview: 'bg-gradient-to-br from-white to-gray-800',    border: 'border-gray-400' },
           ]).map(t => (
             <button key={t.value} onClick={() => setTheme(t.value)}
-              className={`relative p-4 rounded-2xl border-2 transition-all text-center ${theme === t.value ? 'border-blue-600 bg-blue-50 shadow-md shadow-blue-600/20' : `border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm`}`}>
-              <div className={`w-full h-12 rounded-xl border ${t.border} ${t.preview} mb-3 shadow-inner`} />
+              className={`relative p-3 sm:p-4 rounded-2xl border-2 transition-all text-center ${theme === t.value ? 'border-blue-600 bg-blue-50 shadow-md shadow-blue-600/20' : `border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm`}`}>
+              <div className={`w-full h-10 sm:h-12 rounded-xl border ${t.border} ${t.preview} mb-2 sm:mb-3 shadow-inner`} />
               <span className={`text-xs font-bold ${theme === t.value ? 'text-blue-700' : 'text-gray-600'}`}>{t.label}</span>
               {theme === t.value && (
-                <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-sm">
+                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-sm">
                   <Check size={11} className="text-white" />
                 </div>
               )}
@@ -206,7 +220,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       </div>
       <div>
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Layout Density</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {([
             { value: 'comfortable', label: 'Comfortable', desc: 'More breathing room' },
             { value: 'compact',     label: 'Compact',     desc: 'Denser information' },
@@ -224,7 +238,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const creditsPanel = (
     <div className="space-y-8">
-      {/* Credit Points Management */}
       <div>
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Credit Points Management</p>
         <div className="space-y-4">
@@ -232,8 +245,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             { label: 'Points per Free Vote', value: freeVotePoints, onChange: setFreeVotePoints, desc: 'Credits awarded for each free vote cast' },
             { label: 'Points per Premium Vote', value: premiumVotePoints, onChange: setPremiumVotePoints, desc: 'Credits awarded for each premium vote cast' },
           ].map(field => (
-            <div key={field.label} className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 bg-white">
-              <div>
+            <div key={field.label} className="flex items-center justify-between gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-white">
+              <div className="min-w-0">
                 <p className="text-sm font-bold text-gray-800">{field.label}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{field.desc}</p>
               </div>
@@ -242,14 +255,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 min="0"
                 value={field.value}
                 onChange={e => field.onChange(e.target.value)}
-                className="w-24 px-3 py-2 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-800 text-right focus:outline-none focus:border-yellow-500 transition-colors"
+                className="w-20 sm:w-24 px-3 py-2 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-800 text-right focus:outline-none focus:border-yellow-500 transition-colors shrink-0"
               />
             </div>
           ))}
         </div>
       </div>
-
-      {/* Price Management */}
       <div>
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Price Management</p>
         <div className="space-y-4">
@@ -257,20 +268,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             { label: 'Basic Package Price (ETB)', value: basicPackagePrice, onChange: setBasicPackagePrice, desc: 'Price for the basic voting package' },
             { label: 'Premium Package Price (ETB)', value: premiumPackagePrice, onChange: setPremiumPackagePrice, desc: 'Price for the premium voting package' },
           ].map(field => (
-            <div key={field.label} className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 bg-white">
-              <div>
+            <div key={field.label} className="flex items-center justify-between gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-white">
+              <div className="min-w-0">
                 <p className="text-sm font-bold text-gray-800">{field.label}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{field.desc}</p>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-sm font-bold text-gray-500">ETB</span>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-sm font-bold text-gray-500 hidden sm:inline">ETB</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={field.value}
                   onChange={e => field.onChange(e.target.value)}
-                  className="w-24 px-3 py-2 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-800 text-right focus:outline-none focus:border-yellow-500 transition-colors"
+                  className="w-20 sm:w-24 px-3 py-2 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-800 text-right focus:outline-none focus:border-yellow-500 transition-colors"
                 />
               </div>
             </div>
@@ -293,86 +304,123 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-md" style={{ zIndex: 9998 }} onClick={onClose} />
 
-      {/* Modal */}
-      <div className="fixed inset-0 flex items-start justify-center px-6 pt-28 pb-8" style={{ zIndex: 9999, overflowY: 'auto' }}>
+      {/* Modal container — full screen on mobile, centered card on desktop */}
+      <div className="fixed inset-0 flex items-end sm:items-center justify-center sm:px-4 sm:py-6" style={{ zIndex: 9999 }}>
         <div
-          className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
-          style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.25)' }}
+          className="w-full sm:max-w-4xl bg-white sm:rounded-3xl shadow-2xl flex flex-col"
+          style={{
+            boxShadow: '0 32px 80px rgba(0,0,0,0.25)',
+            maxHeight: '100dvh',
+            height: '100dvh',
+          }}
         >
-          {/* Top header bar */}
-          <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/40">
+          {/* ── Top header bar ── */}
+          <div className="flex items-center justify-between px-5 sm:px-8 py-4 sm:py-5 border-b border-gray-100 bg-white shrink-0 sm:rounded-t-3xl">
+            {/* Mobile: back button when inside a panel */}
+            <div className="flex items-center gap-3 min-w-0">
+              {mobileView === 'panel' && (
+                <button
+                  onClick={() => setMobileView('nav')}
+                  className="sm:hidden w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-all shrink-0 -ml-1"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/40 shrink-0">
                 <User size={18} className="text-white" />
               </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 leading-none">Account Settings</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Manage your profile and preferences</p>
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-black text-gray-900 leading-none truncate">
+                  {mobileView === 'panel' ? activeNav.label : 'Account Settings'}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  {mobileView === 'panel' ? panelDesc[active] : 'Manage your profile and preferences'}
+                </p>
               </div>
             </div>
-            <button onClick={onClose}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all">
+            <button
+              onClick={onClose}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all shrink-0"
+            >
               <X size={20} />
             </button>
           </div>
 
-          {/* Body: left tabs + right content */}
+          {/* ── Body ── */}
           <div className="flex flex-1 overflow-hidden">
 
-            {/* Left tab strip */}
-            <div className="w-52 shrink-0 border-r border-gray-100 bg-gray-50/80 flex flex-col py-4 px-3 gap-1 overflow-y-auto">
+            {/* Left tab strip — always visible on sm+, hidden on mobile when panel is open */}
+            <div className={`
+              w-full sm:w-52 shrink-0 border-r border-gray-100 bg-gray-50/80 flex flex-col py-3 sm:py-4 px-3 gap-1 overflow-y-auto
+              ${mobileView === 'panel' ? 'hidden sm:flex' : 'flex'}
+            `}>
               {NAV.map(item => {
                 const Icon = item.icon;
                 const isActive = active === item.id;
                 return (
-                  <button key={item.id} onClick={() => setActive(item.id)}
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavSelect(item.id)}
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all ${
                       isActive
                         ? 'bg-white shadow-md border border-gray-200 text-gray-900'
                         : 'text-gray-500 hover:bg-white/70 hover:text-gray-800'
-                    }`}>
+                    }`}
+                  >
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isActive ? item.iconBg : 'bg-gray-200'}`}>
                       <Icon size={15} className={isActive ? item.iconColor : 'text-gray-500'} />
                     </div>
-                    <span className={`text-sm font-bold ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{item.label}</span>
-                    {isActive && <div className={`ml-auto w-1.5 h-6 rounded-full ${item.accent.replace('border-', 'bg-')}`} />}
+                    <span className={`text-sm font-bold flex-1 ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{item.label}</span>
+                    {/* On mobile show a chevron; on desktop show the accent bar */}
+                    <span className="sm:hidden text-gray-400">›</span>
+                    {isActive && <div className={`hidden sm:block ml-auto w-1.5 h-6 rounded-full ${item.accent.replace('border-', 'bg-')}`} />}
                   </button>
                 );
               })}
             </div>
 
-            {/* Right content panel */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Right content panel — hidden on mobile when nav is showing */}
+            <div className={`
+              flex-1 overflow-y-auto
+              ${mobileView === 'nav' ? 'hidden sm:block' : 'block'}
+            `}>
               {/* Panel header */}
-              <div className="px-8 py-5 border-b border-gray-100 flex items-center gap-4 bg-gradient-to-r from-white to-gray-50/50">
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm ${activeNav.iconBg}`}>
-                  <ActiveIcon size={20} className={activeNav.iconColor} />
+              <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-gray-100 flex items-center gap-3 sm:gap-4 bg-gradient-to-r from-white to-gray-50/50">
+                <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-sm shrink-0 ${activeNav.iconBg}`}>
+                  <ActiveIcon size={18} className={activeNav.iconColor} />
                 </div>
-                <div>
-                  <h3 className="text-base font-black text-gray-900">{activeNav.label}</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">{panelDesc[active]}</p>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-black text-gray-900 truncate">{activeNav.label}</h3>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{panelDesc[active]}</p>
                 </div>
               </div>
 
               {/* Panel content */}
-              <div className="px-8 py-6">
+              <div className="px-5 sm:px-8 py-5 sm:py-6">
                 {panels[active]}
               </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-gray-100 bg-gray-50/50 shrink-0">
-            <button onClick={onClose}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-600 border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all">
+          {/* ── Footer — only show when panel content is visible ── */}
+          <div className={`
+            flex items-center justify-end gap-3 px-5 sm:px-8 py-4 sm:py-5 border-t border-gray-100 bg-gray-50/50 shrink-0 sm:rounded-b-3xl
+            ${mobileView === 'nav' ? 'hidden sm:flex' : 'flex'}
+          `}>
+            <button
+              onClick={onClose}
+              className="px-5 sm:px-6 py-2.5 rounded-xl text-sm font-bold text-gray-600 border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all"
+            >
               Cancel
             </button>
-            <button onClick={handleSave}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all flex items-center gap-2 shadow-lg"
+            <button
+              onClick={handleSave}
+              className="px-5 sm:px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all flex items-center gap-2 shadow-lg"
               style={{
                 backgroundColor: saved ? '#16a34a' : '#2563eb',
                 boxShadow: saved ? '0 4px 14px rgba(22,163,74,0.4)' : '0 4px 14px rgba(37,99,235,0.4)',
-              }}>
+              }}
+            >
               {saved ? <><Check size={15} /> Saved!</> : 'Save Changes'}
             </button>
           </div>

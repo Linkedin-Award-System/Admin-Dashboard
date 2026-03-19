@@ -6,10 +6,11 @@ import { useNavigate } from 'react-router-dom';
 interface ProfileDropdownProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenProfile: () => void;
   onOpenSettings: () => void;
 }
 
-export function ProfileDropdown({ isOpen, onClose, onOpenSettings }: ProfileDropdownProps) {
+export function ProfileDropdown({ isOpen, onClose, onOpenProfile, onOpenSettings }: ProfileDropdownProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -36,6 +37,11 @@ export function ProfileDropdown({ isOpen, onClose, onOpenSettings }: ProfileDrop
     onClose();
   };
 
+  const handleOpenProfile = () => {
+    onClose();
+    onOpenProfile();
+  };
+
   const handleOpenSettings = () => {
     onClose();
     onOpenSettings();
@@ -44,7 +50,7 @@ export function ProfileDropdown({ isOpen, onClose, onOpenSettings }: ProfileDrop
   if (!isOpen) return null;
 
   const menuItems = [
-    { icon: User, label: 'My Profile', action: handleOpenSettings },
+    { icon: User, label: 'My Profile', action: handleOpenProfile },
     { icon: Settings, label: 'Account Settings', action: handleOpenSettings },
   ];
 
