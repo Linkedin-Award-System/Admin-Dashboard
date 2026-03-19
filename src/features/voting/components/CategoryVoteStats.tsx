@@ -103,10 +103,16 @@ function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
                   <div
                     key={nominee.nomineeId}
                     className="group cursor-pointer"
-                    onClick={() => navigate(`/nominees/${nominee.nomineeId}`)}
+                    onClick={() => {
+                      const nid = nominee.nomineeId?.trim();
+                      if (nid) navigate(`/nominees/${nid}`);
+                    }}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/nominees/${nominee.nomineeId}`); }}
+                    onKeyDown={(e) => {
+                      const nid = nominee.nomineeId?.trim();
+                      if ((e.key === 'Enter' || e.key === ' ') && nid) navigate(`/nominees/${nid}`);
+                    }}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
