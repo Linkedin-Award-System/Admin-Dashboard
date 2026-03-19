@@ -12,14 +12,19 @@ import { uploadService } from '@/features/uploads/services/upload-service';
 
 const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
 
-/** Resolves a stored URL to one the browser can load (Railway absolute → relative proxy path) */
+/** Resolves a stored URL to one the browser can load */
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('blob:')) return url;
-  if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  // Railway-hosted uploads: use absolute URL directly — Railway serves with CORS headers
+  if (url.startsWith(RAILWAY_BASE)) return url;
+  // Relative /uploads path: rewrite to absolute Railway URL
+  if (url.startsWith('/uploads/')) return `${RAILWAY_BASE}${url}`;
   // Route LinkedIn CDN URLs through the server-side proxy to avoid CORS issues on deployed site
   if (isLinkedInCdnUrl(url)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
-  return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return `${RAILWAY_BASE}${url}`;
+  return `${RAILWAY_BASE}/uploads/${url}`;
 }
 
 /** Returns true if the URL is a LinkedIn CDN URL that the backend cannot store */
