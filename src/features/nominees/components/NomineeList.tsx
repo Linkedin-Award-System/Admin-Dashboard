@@ -33,16 +33,20 @@ function isLinkedInCdnUrl(url: string): boolean {
   }
 }
 
+const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
+
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('blob:')) return url;
-  const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
-  if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  // Railway-hosted uploads: proxy through Vercel to bypass Cross-Origin-Resource-Policy: same-origin
+  if (url.startsWith(RAILWAY_BASE)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
+  // Relative /uploads path: rewrite to absolute Railway URL then proxy
+  if (url.startsWith('/uploads/')) return `/api/fetch-image?url=${encodeURIComponent(`${RAILWAY_BASE}${url}`)}`;
   // Route LinkedIn CDN URLs through the server-side proxy to avoid CORS issues on deployed site
   if (isLinkedInCdnUrl(url)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/')) return url;
-  return `/uploads/${url}`;
+  if (url.startsWith('/')) return `/api/fetch-image?url=${encodeURIComponent(`${RAILWAY_BASE}${url}`)}`;
+  return `/api/fetch-image?url=${encodeURIComponent(`${RAILWAY_BASE}/uploads/${url}`)}`;
 }
 
 const NomineeAvatar = ({ nominee }: { nominee: Nominee }) => {

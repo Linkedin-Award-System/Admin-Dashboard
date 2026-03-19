@@ -16,15 +16,15 @@ const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('blob:')) return url;
-  // Railway-hosted uploads: use absolute URL directly — Railway serves with CORS headers
-  if (url.startsWith(RAILWAY_BASE)) return url;
-  // Relative /uploads path: rewrite to absolute Railway URL
-  if (url.startsWith('/uploads/')) return `${RAILWAY_BASE}${url}`;
+  // Railway-hosted uploads: proxy through Vercel to bypass Cross-Origin-Resource-Policy: same-origin
+  if (url.startsWith(RAILWAY_BASE)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
+  // Relative /uploads path: rewrite to absolute Railway URL then proxy
+  if (url.startsWith('/uploads/')) return `/api/fetch-image?url=${encodeURIComponent(`${RAILWAY_BASE}${url}`)}`;
   // Route LinkedIn CDN URLs through the server-side proxy to avoid CORS issues on deployed site
   if (isLinkedInCdnUrl(url)) return `/api/fetch-image?url=${encodeURIComponent(url)}`;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/')) return `${RAILWAY_BASE}${url}`;
-  return `${RAILWAY_BASE}/uploads/${url}`;
+  if (url.startsWith('/')) return `/api/fetch-image?url=${encodeURIComponent(`${RAILWAY_BASE}${url}`)}`;
+  return `/api/fetch-image?url=${encodeURIComponent(`${RAILWAY_BASE}/uploads/${url}`)}`;
 }
 
 /** Returns true if the URL is a LinkedIn CDN URL that the backend cannot store */
