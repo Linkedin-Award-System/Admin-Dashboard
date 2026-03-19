@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<string, {
     badge: 'completed',
     icon: CheckCircle2,
     label: 'Completed',
-    iconBg: 'bg-gradient-to-br from-emerald-400 to-green-500',
+    iconBg: 'linear-gradient(135deg, #34d399, #10b981)',
     rowAccent: 'border-l-emerald-400',
     amountColor: 'text-emerald-700',
   },
@@ -39,7 +39,7 @@ const STATUS_CONFIG: Record<string, {
     badge: 'pending',
     icon: Clock,
     label: 'Pending',
-    iconBg: 'bg-gradient-to-br from-amber-400 to-orange-400',
+    iconBg: 'linear-gradient(135deg, #fbbf24, #f97316)',
     rowAccent: 'border-l-amber-400',
     amountColor: 'text-amber-700',
   },
@@ -47,7 +47,7 @@ const STATUS_CONFIG: Record<string, {
     badge: 'failed',
     icon: AlertCircle,
     label: 'Failed',
-    iconBg: 'bg-gradient-to-br from-red-400 to-rose-500',
+    iconBg: 'linear-gradient(135deg, #f87171, #e11d48)',
     rowAccent: 'border-l-red-400',
     amountColor: 'text-red-600',
   },
@@ -55,7 +55,7 @@ const STATUS_CONFIG: Record<string, {
     badge: 'refunded',
     icon: RotateCcw,
     label: 'Refunded',
-    iconBg: 'bg-gradient-to-br from-blue-400 to-indigo-500',
+    iconBg: 'linear-gradient(135deg, #60a5fa, #6366f1)',
     rowAccent: 'border-l-blue-400',
     amountColor: 'text-blue-700',
   },
@@ -66,9 +66,9 @@ const getStatusConfig = (status: string) =>
     badge: 'inactive' as const,
     icon: CreditCard,
     label: status,
-    iconBg: 'bg-gradient-to-br from-gray-400 to-slate-500',
-    rowAccent: 'border-l-gray-300',
-    amountColor: 'text-gray-700',
+    iconBg: 'linear-gradient(135deg, #0a66c2, #1d8fe8)',
+    rowAccent: 'border-l-blue-300',
+    amountColor: 'text-blue-700',
   };
 
 const QUICK_FILTERS = [
@@ -151,7 +151,7 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
       {/* Transactions header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-[1.75rem] border border-border-light shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-[#085299] to-[#0a66c2] rounded-2xl text-white shadow-md">
+          <div className="p-3 rounded-2xl text-white shadow-md" style={{ background: 'linear-gradient(135deg, #0a66c2, #1d8fe8)' }}>
             <CreditCard size={24} strokeWidth={2} />
           </div>
           <div>
@@ -186,14 +186,15 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
             onClick={() => handleQuickFilter(quickFilter === label.toUpperCase() ? '' : label.toUpperCase())}
             className={cn(
               'flex items-center gap-3 p-4 rounded-2xl border transition-all hover:shadow-sm',
-              bg, border,
-              quickFilter === label.toUpperCase() && 'ring-2 ring-offset-1 ring-primary-400'
+              quickFilter === label.toUpperCase()
+                ? 'bg-[#0a66c2] border-[#0a66c2] shadow-md'
+                : cn(bg, border, 'hover:shadow-sm')
             )}
           >
-            <Icon className={cn('h-5 w-5 shrink-0', color)} />
+            <Icon className={cn('h-5 w-5 shrink-0', quickFilter === label.toUpperCase() ? 'text-white' : color)} />
             <div className="text-left">
-              <div className={cn('text-xl font-bold', color)}>{count}</div>
-              <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</div>
+              <div className={cn('text-xl font-bold', quickFilter === label.toUpperCase() ? 'text-white' : color)}>{count}</div>
+              <div className={cn('text-[10px] font-semibold uppercase tracking-wide', quickFilter === label.toUpperCase() ? 'text-blue-100' : 'text-gray-500')}>{label}</div>
             </div>
           </button>
         ))}
@@ -209,9 +210,10 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
             className={cn(
               'px-4 py-1.5 rounded-full text-xs font-semibold transition-all border',
               quickFilter === f.value
-                ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                : 'bg-white text-gray-600 border-border-light hover:bg-bg-tertiary'
+                ? 'text-white border-[#0a66c2] shadow-sm'
+                : 'bg-white text-gray-600 border-border-light hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'
             )}
+            style={quickFilter === f.value ? { backgroundColor: '#0a66c2' } : {}}
           >
             {f.label}
           </button>
@@ -250,7 +252,10 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
                 >
                   {/* Status icon + badge + date */}
                   <div className="flex items-center gap-3 lg:w-56 shrink-0">
-                    <div className={cn('h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 transition-transform duration-200 group-hover:scale-105', cfg.iconBg)}>
+                    <div
+                      className="h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 transition-transform duration-200 group-hover:scale-105"
+                      style={{ background: cfg.iconBg }}
+                    >
                       <StatusIcon size={20} strokeWidth={2.5} />
                     </div>
                     <div>
@@ -367,11 +372,12 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
                     key={p}
                     onClick={() => setCurrentPage(p as number)}
                     className={cn(
-                      'h-10 w-10 rounded-xl text-sm font-medium transition-all',
+                      'h-10 w-10 rounded-xl text-sm font-semibold transition-all',
                       currentPage === p
-                        ? 'bg-primary-600 text-white shadow-sm'
-                        : 'bg-white border border-border-light text-gray-700 hover:bg-bg-tertiary'
+                        ? 'text-white shadow-md scale-105'
+                        : 'bg-white border border-border-light text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
                     )}
+                    style={currentPage === p ? { backgroundColor: '#0a66c2', borderColor: '#0a66c2' } : {}}
                   >
                     {p}
                   </button>
