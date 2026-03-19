@@ -189,19 +189,24 @@ export const analyticsService = {
 
   async getVotingTrends(days: number = 30): Promise<VotingTrendData[]> {
     try {
+      // Fetch all votes without date params (backend may not support them)
+      // then filter client-side
+      const votes = await fetchAllVotes();
+
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const votes = await fetchAllVotes({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+      const filtered = votes.filter(v => {
+        if (!v.createdAt) return true;
+        const created = new Date(v.createdAt);
+        return created >= startDate && created <= endDate;
       });
 
-      if (!votes.length) return [];
+      if (!filtered.length) return [];
 
       const byDate = new Map<string, number>();
-      votes.forEach(v => {
+      filtered.forEach(v => {
         const date = v.createdAt?.split('T')[0];
         if (!date) return;
         byDate.set(date, (byDate.get(date) ?? 0) + (v.quantity ?? 1));
