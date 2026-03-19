@@ -88,82 +88,67 @@ function unwrapArray<T>(raw: unknown, key: string): T[] {
   return [];
 }
 
-/** Fetch ALL pages of votes */
+/** Fetch ALL pages of votes — fetches sequentially to avoid overwhelming the backend */
 async function fetchAllVotes(params: Record<string, unknown> = {}): Promise<Vote[]> {
   const first = await apiClient.get<VotesApiResponse | Vote[]>('/admin/votes', {
     params: { ...params, page: 1, limit: 100 },
   });
   const votes = [...unwrapArray<Vote>(first, 'votes')];
   const totalPages = (first as VotesApiResponse)?.pagination?.totalPages ?? 1;
-  if (totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) =>
-        apiClient.get<VotesApiResponse | Vote[]>('/admin/votes', {
-          params: { ...params, page: i + 2, limit: 100 },
-        })
-      )
-    );
-    rest.forEach(r => votes.push(...unwrapArray<Vote>(r, 'votes')));
+  // Fetch remaining pages sequentially to avoid 500s from concurrent load
+  for (let page = 2; page <= totalPages; page++) {
+    const r = await apiClient.get<VotesApiResponse | Vote[]>('/admin/votes', {
+      params: { ...params, page, limit: 100 },
+    });
+    votes.push(...unwrapArray<Vote>(r, 'votes'));
   }
   return votes;
 }
 
-/** Fetch ALL pages of payments */
+/** Fetch ALL pages of payments — fetches sequentially to avoid overwhelming the backend */
 async function fetchAllPayments(params: Record<string, unknown> = {}): Promise<Payment[]> {
   const first = await apiClient.get<PaymentsApiResponse | Payment[]>('/admin/payments', {
     params: { ...params, page: 1, limit: 100 },
   });
   const payments = [...unwrapArray<Payment>(first, 'payments')];
   const totalPages = (first as PaymentsApiResponse)?.pagination?.totalPages ?? 1;
-  if (totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) =>
-        apiClient.get<PaymentsApiResponse | Payment[]>('/admin/payments', {
-          params: { ...params, page: i + 2, limit: 100 },
-        })
-      )
-    );
-    rest.forEach(r => payments.push(...unwrapArray<Payment>(r, 'payments')));
+  for (let page = 2; page <= totalPages; page++) {
+    const r = await apiClient.get<PaymentsApiResponse | Payment[]>('/admin/payments', {
+      params: { ...params, page, limit: 100 },
+    });
+    payments.push(...unwrapArray<Payment>(r, 'payments'));
   }
   return payments;
 }
 
-/** Fetch ALL pages of nominees */
+/** Fetch ALL pages of nominees — fetches sequentially to avoid overwhelming the backend */
 async function fetchAllNominees(): Promise<Nominee[]> {
   const first = await apiClient.get<NomineesApiResponse | Nominee[]>('/admin/nominees', {
     params: { page: 1, limit: 100 },
   });
   const nominees = [...unwrapArray<Nominee>(first, 'nominees')];
   const totalPages = (first as NomineesApiResponse)?.pagination?.totalPages ?? 1;
-  if (totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) =>
-        apiClient.get<NomineesApiResponse | Nominee[]>('/admin/nominees', {
-          params: { page: i + 2, limit: 100 },
-        })
-      )
-    );
-    rest.forEach(r => nominees.push(...unwrapArray<Nominee>(r, 'nominees')));
+  for (let page = 2; page <= totalPages; page++) {
+    const r = await apiClient.get<NomineesApiResponse | Nominee[]>('/admin/nominees', {
+      params: { page, limit: 100 },
+    });
+    nominees.push(...unwrapArray<Nominee>(r, 'nominees'));
   }
   return nominees;
 }
 
-/** Fetch ALL categories (handles both array and paginated wrapper) */
+/** Fetch ALL categories (handles both array and paginated wrapper) — sequential */
 async function fetchAllCategories(): Promise<Category[]> {
   const first = await apiClient.get<CategoriesApiResponse | Category[]>('/admin/categories', {
     params: { page: 1, limit: 100 },
   });
   const cats = [...unwrapArray<Category>(first, 'categories')];
   const totalPages = (first as CategoriesApiResponse)?.pagination?.totalPages ?? 1;
-  if (totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) =>
-        apiClient.get<CategoriesApiResponse | Category[]>('/admin/categories', {
-          params: { page: i + 2, limit: 100 },
-        })
-      )
-    );
-    rest.forEach(r => cats.push(...unwrapArray<Category>(r, 'categories')));
+  for (let page = 2; page <= totalPages; page++) {
+    const r = await apiClient.get<CategoriesApiResponse | Category[]>('/admin/categories', {
+      params: { page, limit: 100 },
+    });
+    cats.push(...unwrapArray<Category>(r, 'categories'));
   }
   return cats;
 }
@@ -223,10 +208,9 @@ export const analyticsService = {
 
   async getVotesByCategory(): Promise<VotesByCategoryData[]> {
     try {
-      const [votes, cats] = await Promise.all([
-        fetchAllVotes(),
-        fetchAllCategories(),
-      ]);
+      // Fetch sequentially — parallel requests can trigger 500s on the backend
+      const votes = await fetchAllVotes();
+      const cats = await fetchAllCategories();
 
       if (!votes.length) return [];
 
