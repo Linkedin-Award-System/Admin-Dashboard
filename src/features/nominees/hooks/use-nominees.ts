@@ -130,8 +130,30 @@ export const useUpdateNominee = () => {
 
       return { previousNominees };
     },
-    onSuccess: () => {
-      // Invalidate all related queries so every page reflects the update
+    onSuccess: (serverData, { id, data }) => {
+      // Merge server response into cache — if backend doesn't return profileImageUrl,
+      // preserve the one we submitted so it survives until the next full refetch
+      queryClient.setQueryData(NOMINEES_QUERY_KEY, (old: Nominee[] | undefined) => {
+        if (!old) return old;
+        return old.map((nominee: Nominee) => {
+          if (nominee.id !== id) return nominee;
+          return {
+            ...nominee,
+            ...serverData,
+            // Preserve submitted profileImageUrl if server response omits it
+            profileImageUrl: serverData?.profileImageUrl ?? data.profileImageUrl ?? nominee.profileImageUrl,
+          };
+        });
+      });
+      // Also update the individual nominee cache entry if it exists
+      queryClient.setQueryData([...NOMINEES_QUERY_KEY, id], (old: Nominee | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          ...serverData,
+          profileImageUrl: serverData?.profileImageUrl ?? data.profileImageUrl ?? old.profileImageUrl,
+        };
+      });
       queryClient.invalidateQueries({ queryKey: NOMINEES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
