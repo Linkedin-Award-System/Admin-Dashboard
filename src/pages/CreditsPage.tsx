@@ -3,7 +3,7 @@ import { Layout } from '@/shared/components/layout';
 import {
   Coins, Package, Star, Zap, TrendingUp, CheckCircle2,
   AlertTriangle, RefreshCw, Sparkles, Crown, Flame,
-  Plus, Pencil, Trash2, ToggleLeft, ToggleRight,
+  Plus, Pencil, Trash2,
 } from 'lucide-react';
 import {
   useCreditPackages,
@@ -113,16 +113,16 @@ interface PackageCardProps {
 function PackageCard({ pkg, rank, totalPackages, onEdit, onDelete, onToggleActive, onTogglePopular }: PackageCardProps) {
   const tier = getTier(pkg.credits);
   const TierIcon = tier.icon;
-  const isInactive = pkg.isActive === false;
+  const isInactive = pkg.isActive !== true;
   const isBestValue = rank === 0 && totalPackages > 1;
   const pricePerCredit = pkg.price > 0 ? (pkg.price / pkg.credits).toFixed(3) : '—';
 
   return (
     <div style={{
       borderRadius: '1.5rem', overflow: 'hidden',
-      boxShadow: pkg.isPopular ? `0 8px 32px rgba(8,82,153,0.18), ${tier.glow}` : '0 2px 8px rgba(0,0,0,0.07)',
-      border: pkg.isPopular ? '2px solid #085299' : '1px solid #f0f0f0',
-      opacity: isInactive ? 0.65 : 1,
+      boxShadow: pkg.isPopular ? `0 8px 32px rgba(245,158,11,0.2), ${tier.glow}` : !isInactive ? '0 2px 8px rgba(0,0,0,0.07)' : '0 1px 4px rgba(0,0,0,0.04)',
+      border: pkg.isPopular ? '2px solid #f59e0b' : isInactive ? '1.5px dashed #d1d5db' : '1px solid #e5e7eb',
+      opacity: isInactive ? 0.7 : 1,
       display: 'flex', flexDirection: 'column',
       transition: 'transform 0.2s, box-shadow 0.2s',
       position: 'relative',
@@ -131,13 +131,13 @@ function PackageCard({ pkg, rank, totalPackages, onEdit, onDelete, onToggleActiv
         if (!isInactive) {
           (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
           (e.currentTarget as HTMLDivElement).style.boxShadow = pkg.isPopular
-            ? `0 16px 48px rgba(8,82,153,0.22), ${tier.glow}` : '0 8px 24px rgba(0,0,0,0.12)';
+            ? `0 16px 48px rgba(245,158,11,0.25), ${tier.glow}` : '0 8px 24px rgba(0,0,0,0.12)';
         }
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
         (e.currentTarget as HTMLDivElement).style.boxShadow = pkg.isPopular
-          ? `0 8px 32px rgba(8,82,153,0.18), ${tier.glow}` : '0 2px 8px rgba(0,0,0,0.07)';
+          ? `0 8px 32px rgba(245,158,11,0.2), ${tier.glow}` : !isInactive ? '0 2px 8px rgba(0,0,0,0.07)' : '0 1px 4px rgba(0,0,0,0.04)';
       }}
     >
       {/* Dark gradient header */}
@@ -154,22 +154,30 @@ function PackageCard({ pkg, rank, totalPackages, onEdit, onDelete, onToggleActiv
             <TierIcon size={12} style={{ color: tier.accent }} />
             <span style={{ fontSize: 11, fontWeight: 700, color: tier.accent, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tier.label}</span>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {/* Active / Inactive status badge — always visible */}
+            {!isInactive ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 20, padding: '4px 10px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Active</span>
+              </div>
+            ) : (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(156,163,175,0.2)', border: '1px solid rgba(156,163,175,0.3)', borderRadius: 20, padding: '4px 10px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#9ca3af', display: 'inline-block' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Inactive</span>
+              </div>
+            )}
+            {/* Popular badge */}
             {pkg.isPopular && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#085299', borderRadius: 20, padding: '4px 10px' }}>
-                <Star size={10} fill="#fff" style={{ color: '#fff' }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Popular</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 20, padding: '4px 10px' }}>
+                <Star size={9} fill="#f59e0b" style={{ color: '#f59e0b' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Popular</span>
               </div>
             )}
             {isBestValue && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '4px 10px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '4px 10px' }}>
                 <TrendingUp size={10} style={{ color: '#10b981' }} />
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Best Value</span>
-              </div>
-            )}
-            {isInactive && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(156,163,175,0.2)', borderRadius: 20, padding: '4px 10px' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Inactive</span>
               </div>
             )}
           </div>
@@ -222,39 +230,44 @@ function PackageCard({ pkg, rank, totalPackages, onEdit, onDelete, onToggleActiv
           display: 'flex', alignItems: 'center', gap: 6,
           paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6', marginTop: 'auto',
         }}>
-          {/* Active toggle */}
+          {/* Active toggle button */}
           <button
             onClick={() => onToggleActive(pkg)}
-            title={isInactive ? 'Activate' : 'Deactivate'}
+            title={isInactive ? 'Click to activate this package' : 'Click to deactivate this package'}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '0.4rem 0.75rem', borderRadius: '0.5rem',
-              border: `1px solid ${isInactive ? '#d1fae5' : '#fee2e2'}`,
-              background: isInactive ? '#f0fdf4' : '#fef2f2',
-              color: isInactive ? '#059669' : '#dc2626',
-              fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+              border: `1.5px solid ${!isInactive ? '#6ee7b7' : '#d1d5db'}`,
+              background: !isInactive ? '#ecfdf5' : '#f9fafb',
+              color: !isInactive ? '#059669' : '#9ca3af',
+              fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
               transition: 'all 0.15s',
             }}
           >
-            {isInactive ? <ToggleLeft size={13} /> : <ToggleRight size={13} />}
-            {isInactive ? 'Activate' : 'Active'}
+            {/* Live dot for active state */}
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+              background: !isInactive ? '#10b981' : '#d1d5db',
+              boxShadow: !isInactive ? '0 0 0 2px rgba(16,185,129,0.25)' : 'none',
+            }} />
+            {!isInactive ? 'Active' : 'Inactive'}
           </button>
 
-          {/* Popular toggle */}
+          {/* Featured toggle button */}
           <button
             onClick={() => onTogglePopular(pkg)}
-            title={pkg.isPopular ? 'Unfeature' : 'Feature'}
+            title={pkg.isPopular ? 'Click to unfeature this package' : 'Click to feature this package'}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '0.4rem 0.75rem', borderRadius: '0.5rem',
-              border: `1px solid ${pkg.isPopular ? '#fde68a' : '#e5e7eb'}`,
+              border: `1.5px solid ${pkg.isPopular ? '#fcd34d' : '#d1d5db'}`,
               background: pkg.isPopular ? '#fffbeb' : '#f9fafb',
-              color: pkg.isPopular ? '#d97706' : '#6b7280',
-              fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+              color: pkg.isPopular ? '#d97706' : '#9ca3af',
+              fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
               transition: 'all 0.15s',
             }}
           >
-            <Star size={12} fill={pkg.isPopular ? '#d97706' : 'none'} />
+            <Star size={12} fill={pkg.isPopular ? '#f59e0b' : 'none'} style={{ color: pkg.isPopular ? '#f59e0b' : '#d1d5db' }} />
             {pkg.isPopular ? 'Featured' : 'Feature'}
           </button>
 
@@ -314,7 +327,7 @@ export const CreditsPage = () => {
     ? [...packages].sort((a, b) => getValueScore(b) - getValueScore(a))
     : [];
 
-  const activeCount = packages?.filter(p => p.isActive !== false).length ?? 0;
+  const activeCount = packages?.filter(p => p.isActive === true).length ?? 0;
   const featuredCount = packages?.filter(p => p.isPopular).length ?? 0;
   const totalCredits = packages?.reduce((s, p) => s + p.credits, 0) ?? 0;
 
@@ -323,12 +336,16 @@ export const CreditsPage = () => {
   const handleCloseForm = () => { setFormOpen(false); setEditPackage(null); };
 
   const handleFormSubmit = async (data: CreditPackageFormData) => {
-    if (editPackage) {
-      await updateMutation.mutateAsync({ id: editPackage.id, data });
-    } else {
-      await createMutation.mutateAsync(data);
+    try {
+      if (editPackage) {
+        await updateMutation.mutateAsync({ id: editPackage.id, data });
+      } else {
+        await createMutation.mutateAsync(data);
+      }
+      handleCloseForm();
+    } catch {
+      // Error is already shown via onError toast — keep the form open so user can fix it
     }
-    handleCloseForm();
   };
 
   const handleConfirmDelete = async () => {
@@ -429,7 +446,7 @@ export const CreditsPage = () => {
                 totalPackages={sortedPackages.length}
                 onEdit={handleOpenEdit}
                 onDelete={setDeleteTarget}
-                onToggleActive={p => toggleActiveMutation.mutate({ id: p.id, isActive: p.isActive === false })}
+                onToggleActive={p => toggleActiveMutation.mutate({ id: p.id, isActive: !(p.isActive === true) })}
                 onTogglePopular={p => togglePopularMutation.mutate({ id: p.id, isPopular: !p.isPopular })}
               />
             ))}
