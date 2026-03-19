@@ -3,14 +3,33 @@
 
 const RAILWAY_API = 'https://linkedin-creative-awards-api-production.up.railway.app';
 
+export const config = {
+  api: {
+    bodyParser: false, // Disable Vercel's body parsing so we can stream multipart/form-data
+  },
+};
+
+/** Read the raw request body as a Buffer */
+function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req, res) {
   // req.url is the full path including /api prefix, e.g. /api/admin/auth/login
   // Strip the leading /api to get the downstream path
   const downstreamPath = req.url.replace(/^\/api/, '') || '/';
   const targetUrl = `${RAILWAY_API}/api${downstreamPath}`;
 
+  // Forward the original Content-Type so multipart boundaries are preserved
+  const contentType = req.headers['content-type'] || 'application/json';
+
   const headers = {
-    'Content-Type': 'application/json',
+    'Content-Type': contentType,
   };
 
   if (req.headers.authorization) {
@@ -22,9 +41,11 @@ export default async function handler(req, res) {
     headers,
   };
 
-  // Vercel auto-parses the body — re-serialize it for the upstream request
-  if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-    fetchOptions.body = JSON.stringify(req.body);
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    const rawBody = await getRawBody(req);
+    if (rawBody.length > 0) {
+      fetchOptions.body = rawBody;
+    }
   }
 
   try {
@@ -39,8 +60,8 @@ export default async function handler(req, res) {
     });
 
     let data;
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
+    const respContentType = response.headers.get('content-type') || '';
+    if (respContentType.includes('application/json')) {
       data = await response.json();
     } else {
       const text = await response.text();
