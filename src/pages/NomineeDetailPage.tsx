@@ -15,6 +15,7 @@ function resolveImageUrl(url?: string): string | undefined {
   if (url.startsWith('blob:')) return url;
   // Strip absolute Railway URL → relative so it goes through the Vite proxy
   if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  if (url.startsWith('http://') || url.startsWith('https://')) return url; // pass through CDN URLs
   if (url.startsWith('/')) return url;
   return `/uploads/${url}`;
 }
