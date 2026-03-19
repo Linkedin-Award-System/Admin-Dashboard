@@ -90,7 +90,7 @@ export const CreditPackageForm = ({
           credits: editPackage.credits,
           price: editPackage.price,
           currency: editPackage.currency ?? 'ETB',
-          isActive: editPackage.isActive !== false,
+          isActive: editPackage.isActive === true,
           isPopular: editPackage.isPopular ?? false,
         });
       } else {
@@ -287,7 +287,7 @@ export const CreditPackageForm = ({
               </div>
               <button
                 type="button"
-                onClick={() => setValue('isActive', !isActive)}
+                onClick={() => setValue('isActive', !isActive, { shouldDirty: true })}
                 style={{
                   width: 44, height: 24, borderRadius: 99,
                   background: isActive ? '#10b981' : '#d1d5db',
@@ -325,7 +325,7 @@ export const CreditPackageForm = ({
               </div>
               <button
                 type="button"
-                onClick={() => setValue('isPopular', !isPopular)}
+                onClick={() => setValue('isPopular', !isPopular, { shouldDirty: true })}
                 style={{
                   width: 44, height: 24, borderRadius: 99,
                   background: isPopular ? '#f59e0b' : '#d1d5db',
