@@ -1,42 +1,131 @@
-import { useState, useRef, useEffect } from 'react';
-import { Bell, X, Check, UserPlus, CreditCard, Vote, AlertCircle, Clock, Trash2 } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, X, Check, Clock, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client-instance';
+import type { Notification } from '@/features/notifications/types';
+import { TYPE_CONFIG, formatRelativeTime } from '@/features/notifications/constants/type-config';
 
-interface Notification {
+// Raw shapes returned by the API (after apiClient strips the outer `data` wrapper)
+interface RawPayment {
   id: string;
-  type: 'nominee' | 'payment' | 'voting' | 'system';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
+  txRef?: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
+  createdAt?: string;
 }
 
-const TYPE_CONFIG = {
-  nominee: {
-    icon: UserPlus,
-    iconBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-    dot: '#2563eb',
-    label: 'Nominee',
-  },
-  payment: {
-    icon: CreditCard,
-    iconBg: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-    dot: '#16a34a',
-    label: 'Payment',
-  },
-  voting: {
-    icon: Vote,
-    iconBg: 'linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)',
-    dot: '#9333ea',
-    label: 'Voting',
-  },
-  system: {
-    icon: AlertCircle,
-    iconBg: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
-    dot: '#ea580c',
-    label: 'System',
-  },
-};
+interface RawVote {
+  id: string;
+  quantity?: number;
+  type?: string;
+  createdAt?: string;
+}
+
+interface RawNominee {
+  id: string;
+  fullName?: string;
+  createdAt?: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function safeArray<T>(raw: unknown, ...keys: string[]): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    for (const k of keys) {
+      if (Array.isArray(obj[k])) return obj[k] as T[];
+    }
+    // Handle nested { data: { payments/votes/nominees: [...] } }
+    if (obj['data'] && typeof obj['data'] === 'object' && !Array.isArray(obj['data'])) {
+      const inner = obj['data'] as Record<string, unknown>;
+      for (const k of keys) {
+        if (Array.isArray(inner[k])) return inner[k] as T[];
+      }
+      if (Array.isArray(inner['data'])) return inner['data'] as T[];
+    }
+  }
+  return [];
+}
+
+function buildNotificationsFromData(
+  payments: RawPayment[],
+  votes: RawVote[],
+  nominees: RawNominee[],
+): Notification[] {
+  const items: Notification[] = [];
+
+  // Recent payments → payment notifications (last 10)
+  const recentPayments = [...payments]
+    .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+    .slice(0, 10);
+
+  for (const p of recentPayments) {
+    const status = (p.status ?? '').toUpperCase();
+    const amount = p.amount != null ? `${p.amount} ${p.currency ?? 'ETB'}` : '';
+    const statusLabel =
+      status === 'COMPLETED' || status === 'SUCCESS' || status === 'PAID' ? 'completed' :
+      status === 'FAILED' || status === 'DECLINED' || status === 'ERROR' ? 'failed' :
+      status === 'REFUNDED' || status === 'REVERSED' ? 'refunded' : 'pending';
+
+    items.push({
+      id: `payment-${p.id}`,
+      type: 'payment',
+      title: `Payment ${statusLabel}`,
+      message: amount
+        ? `Transaction of ${amount} is ${statusLabel}.`
+        : `Transaction ${p.txRef ?? p.id} is ${statusLabel}.`,
+      time: formatRelativeTime(p.createdAt ?? ''),
+      createdAt: p.createdAt ?? '',
+      read: false,
+    });
+  }
+
+  // Recent votes → voting notifications (last 5, grouped loosely)
+  const recentVotes = [...votes]
+    .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+    .slice(0, 5);
+
+  for (const v of recentVotes) {
+    const qty = v.quantity ?? 1;
+    const voteType = (v.type ?? '').toUpperCase() === 'PREMIUM' ? 'premium' : 'free';
+    items.push({
+      id: `vote-${v.id}`,
+      type: 'voting',
+      title: 'New votes cast',
+      message: `${qty} ${voteType} vote${qty !== 1 ? 's' : ''} were recorded.`,
+      time: formatRelativeTime(v.createdAt ?? ''),
+      createdAt: v.createdAt ?? '',
+      read: false,
+    });
+  }
+
+  // Recent nominees → nominee notifications (last 5)
+  const recentNominees = [...nominees]
+    .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+    .slice(0, 5);
+
+  for (const n of recentNominees) {
+    items.push({
+      id: `nominee-${n.id}`,
+      type: 'nominee',
+      title: 'New nominee added',
+      message: n.fullName ? `${n.fullName} was added as a nominee.` : 'A new nominee was added.',
+      time: formatRelativeTime(n.createdAt ?? ''),
+      createdAt: n.createdAt ?? '',
+      read: false,
+    });
+  }
+
+  // Sort all by newest first, cap at 20
+  return items
+    .filter(i => i.createdAt)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 20);
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface NotificationsDropdownProps {
   isOpen: boolean;
@@ -48,28 +137,49 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  // Fetch notifications when dropdown opens
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let cancelled = false;
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     setError(null);
+    try {
+      // Fetch payments, votes, and nominees in parallel — all errors are caught below
+      const [paymentsRaw, votesRaw, nomineesRaw] = await Promise.allSettled([
+        apiClient.get<unknown>('/admin/payments', { params: { limit: 20, page: 1 } }),
+        apiClient.get<unknown>('/admin/votes', { params: { limit: 20, page: 1 } }),
+        apiClient.get<unknown>('/admin/nominees', { params: { limit: 20 } }),
+      ]);
 
-    apiClient.get<Notification[]>('/admin/notifications')
-      .then((data) => {
-        if (!cancelled) setNotifications(data ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load notifications');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      const payments = paymentsRaw.status === 'fulfilled'
+        ? safeArray<RawPayment>(paymentsRaw.value, 'payments', 'data', 'items', 'results')
+        : [];
+      const votes = votesRaw.status === 'fulfilled'
+        ? safeArray<RawVote>(votesRaw.value, 'votes', 'data', 'items', 'results')
+        : [];
+      const nominees = nomineesRaw.status === 'fulfilled'
+        ? safeArray<RawNominee>(nomineesRaw.value, 'nominees', 'data', 'items', 'results')
+        : [];
+
+      const built = buildNotificationsFromData(payments, votes, nominees);
+      setNotifications(built);
+    } catch {
+      setError('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch when dropdown opens
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+
+    fetchNotifications().catch(() => {
+      if (!cancelled) setError('Failed to load notifications');
+    });
 
     return () => { cancelled = true; };
-  }, [isOpen]);
+  }, [isOpen, fetchNotifications]);
 
   // Close on outside click
   useEffect(() => {
@@ -82,37 +192,18 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
 
-  const markAsRead = async (id: string) => {
-    // Optimistic update
+  // Mark as read — local only (no backend endpoint)
+  const markAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    try {
-      await apiClient.patch(`/admin/notifications/${id}/read`);
-    } catch {
-      // Revert on failure
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
-    }
   };
 
-  const markAllAsRead = async () => {
-    const prev = notifications;
-    // Optimistic update
-    setNotifications(p => p.map(n => ({ ...n, read: true })));
-    try {
-      await apiClient.post('/admin/notifications/read-all');
-    } catch {
-      setNotifications(prev);
-    }
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  const deleteNotification = async (id: string) => {
-    const prev = notifications;
-    // Optimistic removal
-    setNotifications(p => p.filter(n => n.id !== id));
-    try {
-      await apiClient.delete(`/admin/notifications/${id}`);
-    } catch {
-      setNotifications(prev);
-    }
+  // Delete — local only
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -153,7 +244,6 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Ambient glow */}
         <div style={{
           position: 'absolute', top: -30, right: -30,
           width: 120, height: 120, borderRadius: '50%',
@@ -207,14 +297,8 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                 color: 'rgba(255,255,255,0.5)',
                 transition: 'background 0.15s, color 0.15s',
               }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.16)';
-                e.currentTarget.style.color = '#fff';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
-              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
             >
               <X size={15} />
             </button>
@@ -222,7 +306,7 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
         </div>
       </div>
 
-      {/* Notification list */}
+      {/* List */}
       <div style={{ maxHeight: 380, overflowY: 'auto' }}>
         {loading ? (
           <div style={{ padding: '48px 20px', textAlign: 'center' }}>
@@ -254,7 +338,11 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
               <div
                 key={n.id}
                 className="notif-item"
-                onClick={() => markAsRead(n.id)}
+                onClick={() => {
+                  markAsRead(n.id);
+                  onClose();
+                  navigate(`/notifications/${n.id}`, { state: { notification: n } });
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -267,7 +355,6 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                   position: 'relative',
                 }}
               >
-                {/* Unread accent bar */}
                 {!n.read && (
                   <div style={{
                     position: 'absolute',
@@ -278,7 +365,6 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                   }} />
                 )}
 
-                {/* Icon */}
                 <div style={{
                   width: 40, height: 40, borderRadius: 12, flexShrink: 0,
                   background: cfg.iconBg,
@@ -289,7 +375,6 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                   <Icon size={17} color="#ffffff" strokeWidth={2} />
                 </div>
 
-                {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
                     <span style={{
@@ -328,12 +413,7 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
                       </button>
                     </div>
                   </div>
-                  <p style={{
-                    fontSize: 12,
-                    color: '#64748b',
-                    lineHeight: 1.55,
-                    margin: '0 0 7px',
-                  }}>
+                  <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.55, margin: '0 0 7px' }}>
                     {n.message}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -374,14 +454,8 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
               color: '#085299',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = '#eff6ff';
-              e.currentTarget.style.borderColor = '#085299';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = '#e2e8f0';
-            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#085299'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
           >
             <Check size={13} />
             Mark all as read
@@ -404,14 +478,8 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
             color: '#64748b',
             transition: 'all 0.15s',
           }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = '#f1f5f9';
-            e.currentTarget.style.borderColor = '#cbd5e1';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.borderColor = '#e2e8f0';
-          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
         >
           Dismiss
         </button>
