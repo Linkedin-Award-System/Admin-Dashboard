@@ -115,7 +115,7 @@ export const CategoryDetailPage = () => {
           </div>
         ) : (
           <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-            {nominees?.map((nominee) => (
+            {[...(nominees ?? [])].sort((a, b) => b.voteCount - a.voteCount).map((nominee) => (
               <div
                 key={nominee.id}
                 className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
