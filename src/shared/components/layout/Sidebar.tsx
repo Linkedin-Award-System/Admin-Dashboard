@@ -9,6 +9,7 @@ import {
   Coins,
   LogOut,
   User,
+  UserCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth';
 
@@ -22,6 +23,7 @@ const navItems: NavItem[] = [
   { name: 'Dashboard',  path: '/dashboard',  icon: LayoutDashboard },
   { name: 'Categories', path: '/categories', icon: Layers },
   { name: 'Nominees',   path: '/nominees',   icon: Users },
+  { name: 'Voters',     path: '/voters',     icon: UserCheck },
   { name: 'Voting Hub', path: '/voting',     icon: Activity },
   { name: 'Financials', path: '/payments',   icon: Landmark },
   { name: 'Credits',    path: '/credits',    icon: Coins },
