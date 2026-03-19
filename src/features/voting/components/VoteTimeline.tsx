@@ -31,25 +31,23 @@ export const VoteTimeline = ({ dateRange }: VoteTimelineProps) => {
   const { data: timelineData, isLoading, error } = useVoteTimeline(dateRange);
   const { data: voteStats } = useVoteStats(dateRange);
 
-  // Build chart data — cumulative or per-category
+  // Build chart data — cumulative (sum all categories per date) or per-category
   const chartData = useMemo(() => {
     if (!timelineData) return [];
 
-    if (!selectedCategory) {
-      // Cumulative: use all timeline data
-      return timelineData.map(d => ({
-        timestamp: new Date(d.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        votes: d.voteCount,
-      }));
-    }
+    // Determine which entries to include
+    const relevant = selectedCategory
+      ? timelineData.filter(d => d.categoryId === selectedCategory)
+      : timelineData;
 
-    // Per-category: filter timeline entries that have a categoryId match
-    // If timeline data has categoryId, filter; otherwise show cumulative with label
-    const filtered = timelineData.filter(d => !d.categoryId || d.categoryId === selectedCategory);
-    return filtered.map(d => ({
-      timestamp: new Date(d.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      votes: d.voteCount,
-    }));
+    // Aggregate by formatted date label (multiple entries can share the same date)
+    const dateMap = new Map<string, number>();
+    relevant.forEach(d => {
+      const label = new Date(d.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      dateMap.set(label, (dateMap.get(label) ?? 0) + d.voteCount);
+    });
+
+    return Array.from(dateMap.entries()).map(([timestamp, votes]) => ({ timestamp, votes }));
   }, [timelineData, selectedCategory]);
 
   const selectedCategoryName = useMemo(() => {
