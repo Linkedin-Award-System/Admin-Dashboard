@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { usePayments } from '../hooks/use-payments';
+import { usePayments, useUserEmailMap } from '../hooks/use-payments';
 import { StatusBadge } from '@/shared/design-system/patterns/StatusBadge';
 import { Button } from '@/shared/design-system';
 import { Label } from '@/shared/components/ui/label';
@@ -81,6 +81,7 @@ const QUICK_FILTERS = [
 
 export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => {
   const { data: payments, isLoading, error } = usePayments(filters);
+  const userEmailMap = useUserEmailMap();
   const [currentPage, setCurrentPage] = useState(1);
   const [quickFilter, setQuickFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -98,6 +99,7 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
         p =>
           p.txRef.toLowerCase().includes(q) ||
           p.userId.toLowerCase().includes(q) ||
+          (userEmailMap[p.userId] ?? '').toLowerCase().includes(q) ||
           p.packageId.toLowerCase().includes(q)
       );
     }
@@ -282,7 +284,7 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
                     <Label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-0.5">
                       <User size={9} /> User
                     </Label>
-                    <p className="text-sm font-medium text-gray-700 truncate">{payment.userId || '—'}</p>
+                    <p className="text-sm font-medium text-gray-700 truncate">{(userEmailMap[payment.userId] ?? payment.userId) || '—'}</p>
                   </div>
 
                   {/* Date */}

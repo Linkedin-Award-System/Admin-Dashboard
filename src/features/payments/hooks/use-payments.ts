@@ -4,6 +4,7 @@ import type { PaymentFilters } from '../types';
 
 const PAYMENTS_QUERY_KEY = ['payments'];
 const TOTAL_REVENUE_QUERY_KEY = ['total-revenue'];
+const USERS_QUERY_KEY = ['payment-users'];
 
 export const usePayments = (filters?: PaymentFilters) => {
   return useQuery({
@@ -33,4 +34,17 @@ export const useTotalRevenue = () => {
     refetchInterval: 30000, // Poll every 30 seconds
     staleTime: 30000,
   });
+};
+
+export const useUserEmailMap = (): Record<string, string> => {
+  const { data } = useQuery({
+    queryKey: USERS_QUERY_KEY,
+    queryFn: () => paymentService.getUsers(),
+    staleTime: 60000,
+  });
+  if (!data) return {};
+  return data.reduce<Record<string, string>>((map, u) => {
+    map[u.id] = u.email;
+    return map;
+  }, {});
 };
