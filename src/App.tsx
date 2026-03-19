@@ -24,6 +24,7 @@ const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const NomineeDetailPage = lazy(() => import('@/pages/NomineeDetailPage'));
 const VotersPage = lazy(() => import('@/pages/VotersPage'));
+const NotificationDetailPage = lazy(() => import('@/pages/NotificationDetailPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,6 +103,14 @@ function AppRoutes() {
             element={
               <AuthGuard>
                 <VotersPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/notifications/:id"
+            element={
+              <AuthGuard>
+                <NotificationDetailPage />
               </AuthGuard>
             }
           />
