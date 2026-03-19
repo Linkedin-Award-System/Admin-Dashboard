@@ -1,9 +1,10 @@
 /**
  * Export Service
- * Handles client-side data export operations using generateCSV
+ * Handles client-side data export operations using generateCSV or generatePDF
  */
 
 import { generateCSV } from '../utils/csv-generator';
+import { generatePDF } from '../utils/pdf-generator';
 import type { ExportFormat } from '../types';
 import type { Category } from '@/features/categories/types';
 import type { VoteStats } from '@/features/voting/types';
@@ -12,9 +13,9 @@ import type { Nominee } from '@/features/nominees/types';
 
 export const exportService = {
   /**
-   * Export categories as CSV
+   * Export categories as CSV or PDF
    */
-  async exportCategories(_format: ExportFormat, data: Category[]): Promise<Blob> {
+  async exportCategories(format: ExportFormat, data: Category[]): Promise<Blob> {
     const rows = data.map(c => ({
       id: c.id,
       name: c.name,
@@ -27,13 +28,15 @@ export const exportService = {
       { key: 'description' as const, label: 'Description' },
       { key: 'nomineeCount' as const, label: 'Nominee Count' },
     ];
-    return generateCSV(rows, headers);
+    return format === 'pdf'
+      ? generatePDF(rows, headers, 'Categories')
+      : generateCSV(rows, headers);
   },
 
   /**
-   * Export vote statistics as CSV
+   * Export vote statistics as CSV or PDF
    */
-  async exportVoteStats(_format: ExportFormat, data: VoteStats[]): Promise<Blob> {
+  async exportVoteStats(format: ExportFormat, data: VoteStats[]): Promise<Blob> {
     const rows = data.map(stat => ({
       categoryName: stat.categoryName,
       leadingNominee: stat.leadingNominee.name,
@@ -46,13 +49,15 @@ export const exportService = {
       { key: 'totalVotes' as const, label: 'Total Votes' },
     ];
 
-    return generateCSV(rows, headers);
+    return format === 'pdf'
+      ? generatePDF(rows, headers, 'Vote Statistics')
+      : generateCSV(rows, headers);
   },
 
   /**
-   * Export payment transactions as CSV
+   * Export payment transactions as CSV or PDF
    */
-  async exportPayments(_format: ExportFormat, data: PaymentTransaction[]): Promise<Blob> {
+  async exportPayments(format: ExportFormat, data: PaymentTransaction[]): Promise<Blob> {
     const rows = data.map(p => ({
       id: p.id,
       txRef: p.txRef,
@@ -69,13 +74,15 @@ export const exportService = {
       { key: 'status' as const, label: 'Status' },
       { key: 'createdAt' as const, label: 'Created At' },
     ];
-    return generateCSV(rows, headers);
+    return format === 'pdf'
+      ? generatePDF(rows, headers, 'Payment Transactions')
+      : generateCSV(rows, headers);
   },
 
   /**
-   * Export nominees as CSV
+   * Export nominees as CSV or PDF
    */
-  async exportNominees(_format: ExportFormat, data: Nominee[]): Promise<Blob> {
+  async exportNominees(format: ExportFormat, data: Nominee[]): Promise<Blob> {
     const rows = data.map(nominee => ({
       id: nominee.id,
       fullName: nominee.fullName,
@@ -92,6 +99,8 @@ export const exportService = {
       { key: 'categories' as const, label: 'Categories' },
     ];
 
-    return generateCSV(rows, headers);
+    return format === 'pdf'
+      ? generatePDF(rows, headers, 'Nominees')
+      : generateCSV(rows, headers);
   },
 };
