@@ -6,13 +6,18 @@ import { DeleteNomineeDialog } from '@/features/nominees/components/DeleteNomine
 import type { Nominee } from '@/features/nominees/types';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/shared/design-system';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCategories } from '@/features/categories/hooks/use-categories';
 
 export const NomineesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingNominee, setEditingNominee] = useState<Nominee | undefined>(undefined);
   const [deletingNominee, setDeletingNominee] = useState<Nominee | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get('categoryId') ?? undefined;
+  const { data: categories } = useCategories();
+  const filteredCategory = categoryId ? categories?.find((c) => c.id === categoryId) : undefined;
 
   const handleCreate = () => {
     setEditingNominee(undefined);
@@ -80,12 +85,30 @@ export const NomineesPage = () => {
             </div>
           </div>
         ) : (
-          <NomineeList
-            onCreate={handleCreate}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onSelect={handleSelect}
-          />
+          <>
+            {filteredCategory && (
+              <div className="flex items-center gap-3 mb-2">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => navigate(-1)}
+                  style={{ backgroundColor: '#ffffff', color: '#085299', border: '2px solid #085299', borderRadius: '1rem' }}
+                >
+                  <ChevronLeft size={20} />
+                </Button>
+                <div>
+                  <p className="text-sm text-gray-500 font-medium">Filtered by category</p>
+                  <h2 className="text-xl font-bold text-gray-900">{filteredCategory.name}</h2>
+                </div>
+              </div>
+            )}
+            <NomineeList
+              onCreate={handleCreate}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onSelect={handleSelect}
+            />
+          </>
         )}
 
         <DeleteNomineeDialog
