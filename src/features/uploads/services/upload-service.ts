@@ -11,7 +11,7 @@ export interface UploadResponse {
   mimeType: string;
 }
 
-export type UploadBucket = 'GENERAL' | 'NOMINEES' | 'SPONSORS' | 'BANNERS';
+export type UploadBucket = 'GENERAL' | 'NOMINEE_PROFILE' | 'CATEGORY_IMAGE' | 'BANNER_IMAGE' | 'SPONSOR_LOGO';
 
 export const uploadService = {
   /**
@@ -25,8 +25,8 @@ export const uploadService = {
     formData.append('file', file);
     formData.append('bucket', bucket);
 
-    // Use fetch directly for FormData (axios has issues with FormData in some cases)
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/uploads`, {
+    // Use fetch directly for FormData — go through the Vite proxy (/api/...) to avoid CORS
+    const response = await fetch('/api/admin/uploads', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -42,12 +42,10 @@ export const uploadService = {
     const data = await response.json();
     const result: UploadResponse = data.data;
 
-    // Ensure the URL is absolute so browsers can load it directly
-    if (result.url && !result.url.startsWith('http')) {
-      // Use the Railway backend URL directly for image serving
-      const railwayBase = 'https://linkedin-creative-awards-api-production.up.railway.app';
-      result.url = `${railwayBase}${result.url.startsWith('/') ? '' : '/'}${result.url}`;
-    }
+    // Return the full absolute URL as-is so it gets stored in the DB.
+    // The public Vercel site needs the absolute Railway URL to load images directly.
+    // Admin dashboard display components use resolveImageUrl() to rewrite it
+    // to a relative proxy path for local/dev rendering.
 
     return result;
   },

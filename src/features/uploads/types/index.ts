@@ -9,7 +9,7 @@ export interface UploadResponse {
   mimeType: string;
 }
 
-export type UploadBucket = 'GENERAL' | 'NOMINEES' | 'SPONSORS' | 'BANNERS';
+export type UploadBucket = 'GENERAL' | 'NOMINEE_PROFILE' | 'CATEGORY_IMAGE' | 'BANNER_IMAGE' | 'SPONSOR_LOGO';
 
 export interface UploadProgress {
   loaded: number;
