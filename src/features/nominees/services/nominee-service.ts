@@ -51,7 +51,29 @@ export const nomineeService = {
   },
 
   async update(id: string, data: NomineeFormData): Promise<Nominee> {
-    const response = await apiClient.patch<Nominee>(`/admin/nominees/${id}`, data);
+    // Build a clean payload — strip undefined/empty optional fields and
+    // sanitize profileImageUrl (LinkedIn CDN URLs contain query params that
+    // some backend validators reject; strip them to just the base URL path).
+    const payload: Record<string, unknown> = {
+      fullName: data.fullName,
+      linkedInProfileUrl: data.linkedInProfileUrl,
+      shortBiography: data.shortBiography,
+      categoryIds: data.categoryIds,
+    };
+
+    if (data.organization) {
+      payload.organization = data.organization;
+    }
+
+    if (data.profileImageUrl) {
+      // Pass through any stored URL (Railway uploads, CDN, etc.) as-is.
+      // LinkedIn CDN URLs are already converted to permanent stored URLs
+      // by the Fetch & Upload flow before reaching here, so no special
+      // handling is needed.
+      payload.profileImageUrl = data.profileImageUrl;
+    }
+
+    const response = await apiClient.patch<Nominee>(`/admin/nominees/${id}`, payload);
     return response;
   },
 

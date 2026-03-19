@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+function isValidUrl(s: string): boolean {
+  try { new URL(s); return true; } catch { return false; }
+}
+
 export const nomineeSchema = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be at most 100 characters'),
   linkedInProfileUrl: z
@@ -18,7 +22,14 @@ export const nomineeSchema = z.object({
     .string()
     .min(1, 'Biography is required')
     .max(1000, 'Biography must be at most 1000 characters'),
-  profileImageUrl: z.string().optional().or(z.literal('')),
+  profileImageUrl: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (val) => !val || val === '' || isValidUrl(val),
+      { message: 'Must be a valid URL' }
+    ),
   categoryIds: z.array(z.string()).min(1, 'At least one category must be selected'),
 });
 

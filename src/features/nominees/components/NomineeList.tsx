@@ -24,17 +24,11 @@ interface NomineeListProps {
 
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  // Already absolute (e.g. blob: preview or full https URL from a CDN)
   if (url.startsWith('blob:')) return url;
-  // Already a full URL pointing to Railway — rewrite to relative so the
-  // Vite proxy (and production reverse-proxy) handles it same-origin
   const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
-  if (url.startsWith(RAILWAY_BASE)) {
-    return url.slice(RAILWAY_BASE.length); // e.g. /uploads/image.jpg
-  }
-  // Already relative (e.g. /uploads/image.jpg)
+  if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  if (url.startsWith('http://') || url.startsWith('https://')) return url; // pass through CDN URLs
   if (url.startsWith('/')) return url;
-  // Bare filename — assume it lives under /uploads/
   return `/uploads/${url}`;
 }
 
@@ -276,7 +270,18 @@ export const NomineeList = ({ onEdit, onDelete, onCreate, onSelect }: NomineeLis
         if (!grouped.has(key)) grouped.set(key, { categoryName: 'Uncategorized', nominees: [] });
         grouped.get(key)!.nominees.push(nominee);
       } else {
-        nominee.categories.forEach((category) => {
+        // When a category filter is active, only group under that specific category.
+        // Without this, nominees that belong to multiple categories would appear under
+        // all their categories even though only one was selected.
+        const categoriesToGroup = selectedCategoryId
+          ? nominee.categories.filter((c) => c.id === selectedCategoryId)
+          : nominee.categories;
+
+        // If the filtered category isn't in the nominee's list (shouldn't happen but guard anyway),
+        // fall back to all categories so the nominee isn't silently dropped.
+        const effectiveCategories = categoriesToGroup.length > 0 ? categoriesToGroup : nominee.categories;
+
+        effectiveCategories.forEach((category) => {
           const hasValidId = category.id && category.id.trim().length > 0;
           const key = hasValidId ? category.id! : '__uncategorized__';
           // Prefer the name from the categories list (authoritative), fall back to what the nominee has
@@ -296,7 +301,7 @@ export const NomineeList = ({ onEdit, onDelete, onCreate, onSelect }: NomineeLis
         (a[1].categoryName ?? '').localeCompare(b[1].categoryName ?? '')
       )
     );
-  }, [filteredNominees, categoryNameMap]);
+  }, [filteredNominees, categoryNameMap, selectedCategoryId]);
 
   const uniqueNominees = useMemo(() => {
     const seen = new Set<string>();

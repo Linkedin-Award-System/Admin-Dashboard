@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { nomineeSchema, type NomineeSchemaType } from '../schemas/nominee-schema';
@@ -6,18 +6,28 @@ import { useCreateNominee, useUpdateNominee } from '../hooks/use-nominees';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/design-system/components/Input/Input';
-import { uploadService } from '@/features/uploads/services/upload-service';
 import type { Nominee } from '../types';
-import { Upload, X, User } from 'lucide-react';
+import { User, AlertTriangle, Upload } from 'lucide-react';
+import { uploadService } from '@/features/uploads/services/upload-service';
 
 const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
-function resolveImageUrl(url?: string): string {
-  if (!url) return '';
+
+/** Resolves a stored URL to one the browser can load (Railway absolute → relative proxy path) */
+function resolveImageUrl(url?: string): string | undefined {
+  if (!url) return undefined;
   if (url.startsWith('blob:')) return url;
-  // Rewrite absolute Railway URLs to relative so the proxy handles them
   if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
-  if (url.startsWith('/')) return url;
-  return `/uploads/${url}`;
+  return url;
+}
+
+/** Returns true if the URL is a LinkedIn CDN URL that the backend cannot store */
+function isLinkedInCdnUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.includes('licdn.com') || parsed.hostname.includes('media.linkedin.com');
+  } catch {
+    return false;
+  }
 }
 
 interface NomineeFormProps {
@@ -32,13 +42,36 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
   const updateMutation = useUpdateNominee();
   const { data: categories } = useCategories();
 
-  // Store the pending file — upload happens at submit time, not on select
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>(resolveImageUrl(nominee?.profileImageUrl));
-  const [imageUploading, setImageUploading] = useState(false);
-  const [imageError, setImageError] = useState<string>('');
-  const [uploadFailed, setUploadFailed] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isFetchingLinkedIn, setIsFetchingLinkedIn] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = uploadService.validateImage(file);
+    if (!validation.valid) {
+      setUploadError(validation.error || 'Invalid file');
+      return;
+    }
+
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const result = await uploadService.uploadImage(file, 'NOMINEE_PROFILE');
+      setValue('profileImageUrl', result.url, { shouldValidate: true });
+      setImgError(false);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+      // Reset so the same file can be re-selected if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const {
     register,
@@ -60,6 +93,12 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
   });
 
   const selectedCategories = watch('categoryIds');
+  const profileImageUrl = watch('profileImageUrl');
+
+  // Reset imgError when URL changes so a new URL gets a fresh attempt
+  useEffect(() => {
+    setImgError(false);
+  }, [profileImageUrl]);
 
   useEffect(() => {
     if (nominee) {
@@ -71,11 +110,35 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
         profileImageUrl: nominee.profileImageUrl || '',
         categoryIds: nominee.categories?.map(c => c.id) || [],
       });
-      setImagePreview(resolveImageUrl(nominee.profileImageUrl));
-      setPendingFile(null);
-      setImageError('');
+      setImgError(false);
     }
   }, [nominee, reset]);
+
+  const handleFetchAndUpload = async () => {
+    const url = profileImageUrl;
+    if (!url || !isLinkedInCdnUrl(url)) return;
+
+    setUploadError(null);
+    setIsFetchingLinkedIn(true);
+    try {
+      const proxyRes = await fetch(`/api/fetch-image?url=${encodeURIComponent(url)}`);
+      if (!proxyRes.ok) {
+        const err = await proxyRes.json().catch(() => ({ error: 'Failed to fetch image' }));
+        throw new Error(err.error || `Fetch failed (${proxyRes.status})`);
+      }
+      const blob = await proxyRes.blob();
+      const contentType = proxyRes.headers.get('content-type') || 'image/jpeg';
+      const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+      const file = new File([blob], `linkedin-profile.${ext}`, { type: contentType });
+      const result = await uploadService.uploadImage(file, 'NOMINEE_PROFILE');
+      setValue('profileImageUrl', result.url, { shouldValidate: true });
+      setImgError(false);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to fetch and upload image');
+    } finally {
+      setIsFetchingLinkedIn(false);
+    }
+  };
 
   const handleCategoryToggle = (categoryId: string) => {
     const currentCategories = selectedCategories || [];
@@ -85,71 +148,17 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
     setValue('categoryIds', newCategories, { shouldValidate: true });
   };
 
-  const processFile = useCallback((file: File) => {
-    setImageError('');
-    setUploadFailed(false);
-    const validation = uploadService.validateImage(file);
-    if (!validation.valid) {
-      setImageError(validation.error || 'Invalid file');
-      return;
-    }
-    // Show local preview immediately — actual upload deferred to submit
-    const localUrl = URL.createObjectURL(file);
-    setImagePreview(localUrl);
-    setPendingFile(file);
-    // Use a non-empty placeholder so Zod doesn't reject the field
-    setValue('profileImageUrl', 'pending-upload');
-  }, [setValue]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
-  };
-
-  const handleRemoveImage = () => {
-    setImagePreview('');
-    setPendingFile(null);
-    setValue('profileImageUrl', '');
-    setImageError('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
   const onSubmit = async (data: NomineeSchemaType) => {
     try {
-      let finalImageUrl = data.profileImageUrl === 'pending-upload'
-        ? (nominee?.profileImageUrl || '')
-        : (data.profileImageUrl || '');
-
-      // Upload the pending file now at submit time
-      if (pendingFile) {
-        try {
-          setImageUploading(true);
-          setUploadFailed(false);
-          const result = await uploadService.uploadImage(pendingFile, 'NOMINEE_PROFILE');
-          finalImageUrl = result.url;
-        } catch {
-          // Upload failed — preserve the existing image URL if there was one
-          finalImageUrl = nominee?.profileImageUrl || '';
-          setUploadFailed(true);
-          setImageError(
-            'Profile image upload failed (server error 500). ' +
-            (finalImageUrl
-              ? 'The previous image has been kept.'
-              : 'The nominee will be saved without a profile image. You can try uploading the image again later.')
-          );
-          setImageUploading(false);
-          // Don't block saving — just warn and continue with old/no image
-        } finally {
-          setImageUploading(false);
-        }
-      }
-
       const submitData: import('../types').NomineeFormData = {
         fullName: data.fullName,
         linkedInProfileUrl: data.linkedInProfileUrl,
         shortBiography: data.shortBiography,
         organization: data.organization || undefined,
-        profileImageUrl: finalImageUrl || undefined,
+        // Don't send LinkedIn CDN URLs — they expire and the backend rejects them
+        profileImageUrl: (data.profileImageUrl && !isLinkedInCdnUrl(data.profileImageUrl))
+          ? data.profileImageUrl
+          : undefined,
         categoryIds: data.categoryIds,
       };
 
@@ -165,7 +174,7 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
   };
 
   const mutation = isEditMode ? updateMutation : createMutation;
-  const isLoading = isSubmitting || mutation.isPending || imageUploading;
+  const isLoading = isSubmitting || mutation.isPending;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -203,79 +212,85 @@ export const NomineeForm = ({ nominee, onSuccess, onCancel }: NomineeFormProps) 
         )}
       </div>
 
-      {/* Profile Image Upload */}
+      {/* Profile Image URL */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-900">
-          Profile Image <span className="text-gray-400 font-normal">(Optional)</span>
-        </label>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-          onChange={handleFileChange}
-          className="hidden"
-          id="profileImageFile"
-        />
-
-        {imagePreview ? (
-          <div className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50">
-            <img
-              src={imagePreview}
-              alt="Profile preview"
-              className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 shrink-0"
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Input
+              id="profileImageUrl"
+              label="Profile Image URL (Optional)"
+              {...register('profileImageUrl')}
+              placeholder="https://example.com/photo.jpg"
+              error={errors.profileImageUrl?.message}
+              aria-invalid={errors.profileImageUrl ? 'true' : 'false'}
             />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-600 truncate">
-                {imageUploading ? 'Uploading...' : pendingFile ? pendingFile.name : 'Image selected'}
-              </p>
-              {imageUploading && (
-                <div className="mt-1 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full animate-pulse w-2/3" />
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                disabled={imageUploading}
-              >
-                Change
-              </button>
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="text-gray-400 hover:text-red-500 transition-colors"
-                disabled={imageUploading}
-              >
-                <X size={16} />
-              </button>
-            </div>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/50 transition-all text-gray-500 hover:text-blue-600"
-          >
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-              <User size={20} className="text-gray-400" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium flex items-center gap-1.5">
-                <Upload size={14} /> Upload profile image
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">JPEG, PNG, GIF or WebP · Max 5MB</p>
-            </div>
-          </button>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={handleFileUpload}
+              aria-label="Upload profile photo"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isUploading || isFetchingLinkedIn}
+              onClick={() => fileInputRef.current?.click()}
+              style={{ backgroundColor: '#ffffff', color: '#085299', border: '2px solid #085299' }}
+              className="hover:bg-primary-50 transition-all duration-200 whitespace-nowrap"
+            >
+              <Upload size={14} className="mr-1.5" />
+              {isUploading ? 'Uploading...' : 'Upload Photo'}
+            </Button>
+          </div>
+        </div>
+
+        {uploadError && (
+          <p className="text-xs text-red-500" role="alert">{uploadError}</p>
         )}
 
-        {imageError && (
-          <div className={`flex items-start gap-2 p-3 rounded-lg text-xs ${uploadFailed ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-red-50 border border-red-200 text-red-700'}`} role="alert">
-            <span className="shrink-0 mt-0.5">{uploadFailed ? '⚠️' : '❌'}</span>
-            <span>{imageError}</span>
+        {profileImageUrl && isLinkedInCdnUrl(profileImageUrl) && (
+          <div className="flex items-start gap-2 p-3 border border-amber-200 rounded-lg bg-amber-50">
+            <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-amber-800">
+                LinkedIn CDN URLs expire and cannot be saved directly. Click "Fetch &amp; Upload" to convert this image to a permanent URL.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isFetchingLinkedIn || isUploading}
+                onClick={handleFetchAndUpload}
+                style={{ backgroundColor: '#ffffff', color: '#085299', border: '2px solid #085299' }}
+                className="mt-2 hover:bg-primary-50 transition-all duration-200 text-xs"
+              >
+                <Upload size={12} className="mr-1.5" />
+                {isFetchingLinkedIn ? 'Fetching...' : 'Fetch & Upload'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {profileImageUrl && !isLinkedInCdnUrl(profileImageUrl) && (
+          <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+            {!imgError ? (
+              <img
+                src={resolveImageUrl(profileImageUrl)}
+                alt="Profile preview"
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 shrink-0"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center shrink-0">
+                <User size={24} className="text-gray-400" />
+              </div>
+            )}
+            <p className="text-xs text-gray-500 truncate flex-1">
+              {imgError ? 'Image could not be loaded' : 'Preview'}
+            </p>
           </div>
         )}
       </div>
