@@ -19,6 +19,11 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path,
       },
+      '/uploads': {
+        target: 'https://linkedin-creative-awards-api-production.up.railway.app',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 })
