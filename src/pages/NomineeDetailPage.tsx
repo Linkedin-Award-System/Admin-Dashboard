@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '@/shared/components/layout';
 import { useNominee } from '@/features/nominees/hooks/use-nominees';
 import { useVotersByNominee } from '@/features/voting/hooks/use-voting';
@@ -12,8 +12,11 @@ import { formatNumber, formatDateTime } from '@/features/dashboard/utils/format-
 const RAILWAY_BASE = 'https://linkedin-creative-awards-api-production.up.railway.app';
 function resolveImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  if (url.startsWith('http')) return url;
-  return `${RAILWAY_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (url.startsWith('blob:')) return url;
+  // Strip absolute Railway URL → relative so it goes through the Vite proxy
+  if (url.startsWith(RAILWAY_BASE)) return url.slice(RAILWAY_BASE.length);
+  if (url.startsWith('/')) return url;
+  return `/uploads/${url}`;
 }
 
 const VOTERS_PER_PAGE = 20;
@@ -21,6 +24,8 @@ const VOTERS_PER_PAGE = 20;
 export function NomineeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backLabel: string = (location.state as { backLabel?: string } | null)?.backLabel ?? 'Back to Nominees';
   const [page, setPage] = useState(1);
   const [imgError, setImgError] = useState(false);
 
@@ -46,8 +51,8 @@ export function NomineeDetailPage() {
       <Layout>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px', textAlign: 'center' }}>
           <p style={{ color: '#6b7280', fontSize: 16 }}>Nominee not found.</p>
-          <button onClick={() => navigate('/nominees')} style={{ marginTop: 16, color: '#085299', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-            ← Back to Nominees
+          <button onClick={() => navigate(-1)} style={{ marginTop: 16, color: '#085299', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+            ← {backLabel}
           </button>
         </div>
       </Layout>
@@ -64,7 +69,7 @@ export function NomineeDetailPage() {
 
         {/* Back button */}
         <button
-          onClick={() => navigate('/nominees')}
+          onClick={() => navigate(-1)}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             marginBottom: 24, color: '#6b7280', fontSize: 13, fontWeight: 600,
@@ -73,7 +78,7 @@ export function NomineeDetailPage() {
           onMouseEnter={e => (e.currentTarget.style.color = '#085299')}
           onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
         >
-          <ArrowLeft size={16} /> Back to Nominees
+          <ArrowLeft size={16} /> {backLabel}
         </button>
 
         {/* Profile card */}
@@ -88,7 +93,7 @@ export function NomineeDetailPage() {
                 src={resolveImageUrl(nominee.profileImageUrl)}
                 alt={nominee.fullName}
                 onError={() => setImgError(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', opacity: 0.7 }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', background: 'transparent' }}
               />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
