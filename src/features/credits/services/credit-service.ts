@@ -34,34 +34,35 @@ function unwrap(raw: unknown): CreditPackage[] {
   return [];
 }
 
-function generateId(): string {
-  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
 export const creditService = {
-  /** Public read — fetches from backend */
+  /** Admin read — fetches from backend */
   async getAll(): Promise<CreditPackage[]> {
-    const res = await apiClient.get('/public/credit-packages');
+    const res = await apiClient.get('/admin/credit-packages');
     return unwrap(res);
   },
 
-  /**
-   * Admin mutations — backend endpoints don't exist yet.
-   * These operate purely in-memory; React Query cache is the source of truth.
-   */
-  createLocal(data: CreditPackageFormData): CreditPackage {
-    return {
-      id: generateId(),
-      ...data,
-      currency: data.currency ?? 'ETB',
-      isActive: data.isActive !== false,
-      isPopular: data.isPopular ?? false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  /** Create a new credit package */
+  async create(data: CreditPackageFormData): Promise<CreditPackage> {
+    return apiClient.post<CreditPackage>('/admin/credit-packages', data);
   },
 
-  updateLocal(existing: CreditPackage, data: Partial<CreditPackageFormData>): CreditPackage {
-    return { ...existing, ...data, updatedAt: new Date().toISOString() };
+  /** Update an existing credit package */
+  async update(id: string, data: Partial<CreditPackageFormData>): Promise<CreditPackage> {
+    return apiClient.patch<CreditPackage>(`/admin/credit-packages/${id}`, data);
+  },
+
+  /** Delete a credit package */
+  async delete(id: string): Promise<void> {
+    return apiClient.delete<void>(`/admin/credit-packages/${id}`);
+  },
+
+  /** @deprecated — kept as stub; use create() instead */
+  createLocal(_data: CreditPackageFormData): never {
+    throw new Error('createLocal is deprecated. Use creditService.create() to persist to the backend.');
+  },
+
+  /** @deprecated — kept as stub; use update() instead */
+  updateLocal(_existing: CreditPackage, _data: Partial<CreditPackageFormData>): never {
+    throw new Error('updateLocal is deprecated. Use creditService.update() to persist to the backend.');
   },
 };
