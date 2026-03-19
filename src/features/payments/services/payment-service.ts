@@ -12,15 +12,23 @@ interface PaymentsResponse {
 }
 
 function unwrapPayments(raw: unknown): PaymentTransaction[] {
-  if (Array.isArray(raw)) return raw as PaymentTransaction[];
-  if (raw && typeof raw === 'object') {
+  let payments: PaymentTransaction[] = [];
+  if (Array.isArray(raw)) {
+    payments = raw as PaymentTransaction[];
+  } else if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>;
-    if (Array.isArray(obj['payments'])) return obj['payments'] as PaymentTransaction[];
-    for (const k of ['data', 'items', 'results']) {
-      if (Array.isArray(obj[k])) return obj[k] as PaymentTransaction[];
+    if (Array.isArray(obj['payments'])) payments = obj['payments'] as PaymentTransaction[];
+    else {
+      for (const k of ['data', 'items', 'results']) {
+        if (Array.isArray(obj[k])) { payments = obj[k] as PaymentTransaction[]; break; }
+      }
     }
   }
-  return [];
+  // Normalize status to uppercase (API may return lowercase)
+  return payments.map((p) => ({
+    ...p,
+    status: (p.status as string)?.toUpperCase() as PaymentTransaction['status'],
+  }));
 }
 
 export const paymentService = {
