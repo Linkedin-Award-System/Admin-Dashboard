@@ -41,11 +41,11 @@ export const authService = {
   },
 
   async forgotPassword(email: string): Promise<void> {
-    await apiClient.post('/admin/auth/forgot-password', { email });
+    await apiClient.post('/admin/auth/password-reset/request', { email });
   },
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    await apiClient.post('/admin/auth/reset-password', { token, newPassword });
+    await apiClient.post('/admin/auth/password-reset/confirm', { token, newPassword });
   },
 
   async logout(): Promise<void> {
