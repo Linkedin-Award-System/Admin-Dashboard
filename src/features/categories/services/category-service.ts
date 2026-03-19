@@ -7,15 +7,25 @@ interface CategoriesResponse {
 }
 
 function unwrapCategories(raw: unknown): Category[] {
-  if (Array.isArray(raw)) return raw as Category[];
-  if (raw && typeof raw === 'object') {
+  let items: unknown[] = [];
+  if (Array.isArray(raw)) {
+    items = raw;
+  } else if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>;
-    if (Array.isArray(obj['categories'])) return obj['categories'] as Category[];
-    for (const k of ['data', 'items', 'results']) {
-      if (Array.isArray(obj[k])) return obj[k] as Category[];
+    if (Array.isArray(obj['categories'])) items = obj['categories'];
+    else {
+      for (const k of ['data', 'items', 'results']) {
+        if (Array.isArray(obj[k])) { items = obj[k] as unknown[]; break; }
+      }
     }
   }
-  return [];
+  // Normalize nomineeCount — API may return _count.nominees instead
+  return items.map((item) => {
+    const c = item as Record<string, unknown>;
+    const count = c['nomineeCount'] ??
+      (c['_count'] as Record<string, unknown> | undefined)?.['nominees'] ?? 0;
+    return { ...c, nomineeCount: Number(count) } as unknown as Category;
+  });
 }
 
 export const categoryService = {
