@@ -56,15 +56,35 @@ function MetricCard({
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
       }}
     >
-      {/* Subtle corner glow */}
+      {/* Decorative corner circle */}
       <div style={{
         position: 'absolute', top: -24, right: -24,
         width: 80, height: 80, borderRadius: '50%',
         background: color, opacity: 0.07, pointerEvents: 'none',
       }} />
 
-      {/* Top row: icon + trend */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Trend badge — anchored to the center of the corner circle (top:-24+40=16, right:-24+40=16) */}
+      {trend && (
+        <span style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          padding: '3px 7px', borderRadius: 20,
+          background: trend.isPositive ? '#f0fdf4' : '#fef2f2',
+          border: `1px solid ${trend.isPositive ? '#bbf7d0' : '#fecaca'}`,
+          color: trend.isPositive ? '#16a34a' : '#dc2626',
+          fontSize: 10, fontWeight: 600,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          zIndex: 1,
+        }}>
+          {trend.isPositive ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+          {trend.value > 0 ? `+${trend.value.toFixed(1)}%` : `${trend.value.toFixed(1)}%`}
+        </span>
+      )}
+
+      {/* Top row: icon only */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         <div style={{
           width: 40, height: 40, borderRadius: 10,
           background: bg,
@@ -73,18 +93,6 @@ function MetricCard({
         }}>
           <Icon size={18} color={color} />
         </div>
-        {trend && (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-            padding: '3px 8px', borderRadius: 20,
-            background: trend.isPositive ? '#f0fdf4' : '#fef2f2',
-            color: trend.isPositive ? '#16a34a' : '#dc2626',
-            fontSize: 11, fontWeight: 600,
-          }}>
-            {trend.isPositive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-            {trend.value > 0 ? `+${trend.value.toFixed(1)}%` : `${trend.value.toFixed(1)}%`}
-          </span>
-        )}
       </div>
 
       {/* Value + label */}
