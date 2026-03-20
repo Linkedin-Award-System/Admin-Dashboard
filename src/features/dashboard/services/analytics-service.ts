@@ -105,6 +105,27 @@ async function fetchAllVotes(params: Record<string, unknown> = {}): Promise<Vote
   return votes;
 }
 
+// Maps non-standard payment status values to canonical ones (mirrors payment-service.ts)
+const PAYMENT_STATUS_ALIAS: Record<string, string> = {
+  SUCCESS: 'COMPLETED',
+  PAID: 'COMPLETED',
+  COMPLETE: 'COMPLETED',
+  PROCESSING: 'PENDING',
+  INITIATED: 'PENDING',
+  CREATED: 'PENDING',
+  ERROR: 'FAILED',
+  DECLINED: 'FAILED',
+  CANCELLED: 'FAILED',
+  CANCELED: 'FAILED',
+  REVERSED: 'REFUNDED',
+  CHARGEBACK: 'REFUNDED',
+};
+
+function normalizePaymentStatus(raw: string): string {
+  const upper = (raw ?? '').toUpperCase();
+  return PAYMENT_STATUS_ALIAS[upper] ?? upper;
+}
+
 /** Fetch ALL pages of payments — fetches sequentially to avoid overwhelming the backend */
 async function fetchAllPayments(params: Record<string, unknown> = {}): Promise<Payment[]> {
   const first = await apiClient.get<PaymentsApiResponse | Payment[]>('/admin/payments', {
@@ -153,21 +174,96 @@ async function fetchAllCategories(): Promise<Category[]> {
   return cats;
 }
 
+// ── Trend computation helpers ─────────────────────────────────────────────────
+
+/** Compute period-over-period % change. Returns absolute value + direction. */
+function computeTrend(current: number, previous: number): { value: number; isPositive: boolean } {
+  if (previous === 0) {
+    if (current === 0) return { value: 0, isPositive: true };
+    return { value: 100, isPositive: true };
+  }
+  const pct = ((current - previous) / previous) * 100;
+  return { value: Math.abs(parseFloat(pct.toFixed(1))), isPositive: pct >= 0 };
+}
+
+/** Sum vote quantities for a list of votes */
+function sumVoteQuantities(votes: Vote[]): number {
+  return votes.reduce((acc, v) => acc + (v.quantity ?? 1), 0);
+}
+
+/** Sum completed payment amounts */
+function sumCompletedRevenue(payments: Payment[]): number {
+  return payments
+    .filter(p => normalizePaymentStatus(p.status ?? '') === 'COMPLETED')
+    .reduce((acc, p) => acc + (p.amount ?? 0), 0);
+}
+
+/** Filter items whose createdAt falls within [start, end] */
+function filterByDateRange<T extends { createdAt?: string }>(items: T[], start: Date, end: Date): T[] {
+  return items.filter(item => {
+    if (!item.createdAt) return false;
+    const d = new Date(item.createdAt);
+    return d >= start && d <= end;
+  });
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const analyticsService = {
   async getMetrics(): Promise<DashboardMetrics> {
     const data = await apiClient.get<DashboardApiResponse>('/admin/dashboard');
+
+    // Fall back to dedicated endpoints when the dashboard response omits or
+    // zeroes out nomineesCount / categoriesCount (both run in parallel).
+    const needNominees   = !data?.nomineesCount;
+    const needCategories = !data?.categoriesCount;
+
+    // Fetch votes + payments alongside nominees/categories to compute real trends
+    const [nomineesResult, categoriesResult, allVotes, allPayments] = await Promise.all([
+      needNominees   ? fetchAllNominees()   : Promise.resolve(null),
+      needCategories ? fetchAllCategories() : Promise.resolve(null),
+      fetchAllVotes(),
+      fetchAllPayments(),
+    ]);
+
+    const totalNominees   = needNominees
+      ? (nomineesResult?.length ?? 0)
+      : (data.nomineesCount ?? 0);
+
+    const totalCategories = needCategories
+      ? (categoriesResult?.length ?? 0)
+      : (data.categoriesCount ?? 0);
+
+    // ── Period windows: current = last 30 days, previous = 30–60 days ago ──
+    const now           = new Date();
+    const currentStart  = new Date(now); currentStart.setDate(now.getDate() - 30);
+    const previousStart = new Date(now); previousStart.setDate(now.getDate() - 60);
+    const previousEnd   = new Date(currentStart);
+
+    const currentVotes    = filterByDateRange(allVotes,    currentStart,  now);
+    const previousVotes   = filterByDateRange(allVotes,    previousStart, previousEnd);
+    const currentPayments = filterByDateRange(allPayments, currentStart,  now);
+    const prevPayments    = filterByDateRange(allPayments, previousStart, previousEnd);
+
+    // Nominees created in each window (only meaningful when we fetched the list)
+    const nominees = nomineesResult ?? [];
+    const currentNomCount  = filterByDateRange(nominees as Array<Nominee & { createdAt?: string }>, currentStart, now).length;
+    const previousNomCount = filterByDateRange(nominees as Array<Nominee & { createdAt?: string }>, previousStart, previousEnd).length;
+
+    // Categories rarely change — compare total vs previous-period additions
+    const cats = categoriesResult ?? [];
+    const prevCatCount = filterByDateRange(cats as Array<Category & { createdAt?: string }>, previousStart, previousEnd).length;
+
     return {
-      totalNominees: data?.nomineesCount ?? 0,
-      totalCategories: data?.categoriesCount ?? 0,
-      totalVotes: data?.totalVotes ?? 0,
+      totalNominees,
+      totalCategories,
+      totalVotes:   data?.totalVotes   ?? 0,
       totalRevenue: data?.totalRevenue ?? 0,
       trends: {
-        nominees:   { value: 0, isPositive: true },
-        categories: { value: 0, isPositive: true },
-        votes:      { value: 0, isPositive: true },
-        revenue:    { value: 0, isPositive: true },
+        votes:      computeTrend(sumVoteQuantities(currentVotes),    sumVoteQuantities(previousVotes)),
+        revenue:    computeTrend(sumCompletedRevenue(currentPayments), sumCompletedRevenue(prevPayments)),
+        nominees:   computeTrend(currentNomCount,  previousNomCount),
+        categories: computeTrend(totalCategories,  prevCatCount),
       },
     };
   },
@@ -256,17 +352,24 @@ export const analyticsService = {
 
   async getRevenueTrends(days: number = 30): Promise<RevenueTrendData[]> {
     try {
+      // Fetch all payments without date params (backend may not support them)
+      // then filter client-side — same pattern as getVotingTrends
+      const payments = await fetchAllPayments();
+
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const payments = await fetchAllPayments({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+      // Filter to the requested date range
+      const inRange = payments.filter(p => {
+        if (!p.createdAt) return true;
+        const created = new Date(p.createdAt);
+        return created >= startDate && created <= endDate;
       });
 
-      const completed = payments.filter(p =>
-        (p.status ?? '').toUpperCase() === 'COMPLETED'
+      // Normalize status and keep only completed payments
+      const completed = inRange.filter(p =>
+        normalizePaymentStatus(p.status ?? '') === 'COMPLETED'
       );
 
       if (!completed.length) return [];
@@ -294,7 +397,7 @@ export const analyticsService = {
 
       const byStatus = new Map<string, number>();
       payments.forEach(p => {
-        const s = (p.status ?? 'UNKNOWN').toUpperCase();
+        const s = normalizePaymentStatus(p.status ?? '');
         byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
       });
 
