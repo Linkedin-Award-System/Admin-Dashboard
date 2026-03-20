@@ -183,10 +183,17 @@ export const votingService = {
   },
 
   async getVotersByNominee(nomineeId: string, page: number = 1, limit: number = 20): Promise<{
-    voters: Array<{ userId: string; quantity: number; type: string; createdAt: string }>;
+    voters: Array<{ userId: string; quantity: number; type: string; createdAt: string; userEmail: string | null }>;
     total: number;
     totalPages: number;
   }> {
+    interface ApiVoterRecord {
+      userId?: string;
+      id?: string;
+      userEmail?: string | null;
+      email?: string | null;
+    }
+
     // Backend filters by nomineeId; fetch the requested page directly
     const response = await apiClient.get<VotesResponse | Vote[]>('/admin/votes', {
       params: { nomineeId, page, limit },
@@ -212,9 +219,22 @@ export const votingService = {
       }
     });
 
-    const voters = Array.from(voterMap.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    // Fetch voter records to enrich with email
+    const votersResponse = await apiClient.get<{ voters?: ApiVoterRecord[]; data?: ApiVoterRecord[] } | ApiVoterRecord[]>('/admin/voters', { params: { limit: 1000 } });
+    const rawVoterRecords: ApiVoterRecord[] =
+      Array.isArray(votersResponse) ? votersResponse :
+      (votersResponse as { voters?: ApiVoterRecord[] }).voters ??
+      (votersResponse as { data?: ApiVoterRecord[] }).data ?? [];
+
+    const emailMap = new Map<string, string | null>();
+    rawVoterRecords.forEach(v => {
+      const uid = v.userId ?? v.id;
+      if (uid) emailMap.set(uid, v.userEmail ?? v.email ?? null);
+    });
+
+    const voters = Array.from(voterMap.values())
+      .map(entry => ({ ...entry, userEmail: emailMap.get(entry.userId) ?? null }))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const total = paginationData?.total ?? voters.length;
     const totalPages = paginationData?.totalPages ?? Math.max(1, Math.ceil(total / limit));
