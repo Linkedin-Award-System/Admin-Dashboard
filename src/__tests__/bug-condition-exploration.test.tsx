@@ -505,3 +505,75 @@ describe('API Integration Update — Bug 5: uploadService sends wrong bucket val
     expect(capturedFormData!.get('bucket')).toBe('NOMINEE_PROFILE');
   });
 });
+
+
+// ===========================================================================
+// Nominee Voter Email Display — Bug Condition Exploration Test
+//
+// **Validates: Requirements 2.1, 2.2**
+//
+// This test MUST FAIL on unfixed code — failure confirms the bug exists.
+// DO NOT attempt to fix the test or the code when it fails.
+// ===========================================================================
+
+describe('Nominee Voter Email Display — Bug Condition: getVotersByNominee missing userEmail', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Mock apiClient.get:
+    // - /admin/votes returns a vote record for nominee 'nom1'
+    // - /admin/voters returns a voter record with userEmail for the same userId
+    (apiClientMock.get as MockType).mockImplementation((url: string, options?: { params?: Record<string, unknown> }) => {
+      const params = options?.params ?? {};
+      if (url === '/admin/votes' && params.nomineeId === 'nom1') {
+        return Promise.resolve({
+          votes: [
+            {
+              id: '1',
+              nomineeId: 'nom1',
+              categoryId: 'cat1',
+              userId: 'user-abc',
+              quantity: 2,
+              type: 'FREE',
+              createdAt: '2024-01-01T00:00:00Z',
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        });
+      }
+      if (url === '/admin/voters') {
+        return Promise.resolve({
+          voters: [
+            {
+              userId: 'user-abc',
+              userEmail: 'alice@example.com',
+              email: 'alice@example.com',
+            },
+          ],
+        });
+      }
+      return Promise.resolve([]);
+    });
+  });
+
+  it('getVotersByNominee returns voter entries with a userEmail field — FAILS on unfixed code', async () => {
+    // On unfixed code: getVotersByNominee never calls /admin/voters, so userEmail is never set
+    // Expected (correct) behavior: each voter entry includes a userEmail field
+    const result = await votingService.getVotersByNominee('nom1', 1, 20);
+
+    // This FAILS on unfixed code — userEmail is undefined because the service never fetches it
+    expect(result.voters[0].userEmail).toBeDefined();
+  });
+
+  it('getVotersByNominee calls /admin/voters during execution — FAILS on unfixed code', async () => {
+    // On unfixed code: only /admin/votes is called, never /admin/voters
+    // Expected (correct) behavior: /admin/voters is called to look up email addresses
+    await votingService.getVotersByNominee('nom1', 1, 20);
+
+    const calls = (apiClientMock.get as MockType).mock.calls;
+    const urls = calls.map((c: unknown[]) => c[0] as string);
+
+    // This FAILS on unfixed code — /admin/voters is never called
+    expect(urls.some((u: string) => u.includes('/admin/voters'))).toBe(true);
+  });
+});
