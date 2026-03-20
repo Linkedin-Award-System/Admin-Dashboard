@@ -752,3 +752,157 @@ describe('API Integration Update — uploadService bucket preservation', () => {
     );
   });
 });
+
+
+// ===========================================================================
+// Nominee Voter Email Display — Preservation: non-email fields unchanged
+//
+// **Validates: Requirements 3.1, 3.2, 3.3**
+//
+// These tests PASS on unfixed code — they establish the baseline behavior
+// that must be preserved after the fix is applied.
+//
+// EXPECTED OUTCOME: All tests PASS (confirms baseline to preserve).
+// ===========================================================================
+
+import { votingService } from '@/features/voting/services/voting-service';
+import type { Mock as MockType2 } from 'vitest';
+
+describe('Nominee Voter Email Display — Preservation: non-email fields unchanged', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Mock apiClient.get:
+    // - /admin/votes returns vote records with specific userId, quantity, type, createdAt
+    // - /admin/voters returns an empty list (simulating graceful degradation)
+    (apiClient.get as MockType2).mockImplementation((url: string, options?: { params?: Record<string, unknown> }) => {
+      const params = options?.params ?? {};
+      if (url === '/admin/votes' && params.nomineeId === 'nom-preserve') {
+        return Promise.resolve({
+          votes: [
+            {
+              id: 'v1',
+              nomineeId: 'nom-preserve',
+              categoryId: 'cat1',
+              userId: 'user-xyz',
+              quantity: 3,
+              type: 'PREMIUM',
+              createdAt: '2024-03-15T10:00:00Z',
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        });
+      }
+      if (url === '/admin/voters') {
+        // Return empty list — simulates no matching voter found
+        return Promise.resolve({ voters: [] });
+      }
+      return Promise.resolve([]);
+    });
+  });
+
+  it('3.1 — userId is returned correctly for any set of mock votes', async () => {
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+
+    expect(result.voters).toHaveLength(1);
+    expect(result.voters[0].userId).toBe('user-xyz');
+  });
+
+  it('3.2 — quantity is returned correctly for any set of mock votes', async () => {
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+
+    expect(result.voters[0].quantity).toBe(3);
+  });
+
+  it('3.2 — type is returned correctly for any set of mock votes', async () => {
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+
+    expect(result.voters[0].type).toBe('PREMIUM');
+  });
+
+  it('3.2 — createdAt is returned correctly for any set of mock votes', async () => {
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+
+    expect(result.voters[0].createdAt).toBe('2024-03-15T10:00:00Z');
+  });
+
+  it('3.3 — total is a number >= 0', async () => {
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+
+    expect(typeof result.total).toBe('number');
+    expect(result.total).toBeGreaterThanOrEqual(0);
+  });
+
+  it('3.3 — totalPages is a number >= 1', async () => {
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+
+    expect(typeof result.totalPages).toBe('number');
+    expect(result.totalPages).toBeGreaterThanOrEqual(1);
+  });
+
+  it('3.1 — graceful degradation: does NOT throw when /admin/voters returns empty list', async () => {
+    // /admin/voters returns [] — no matching voter for userId
+    // The function must not throw; voter row should still be returned
+    await expect(
+      votingService.getVotersByNominee('nom-preserve', 1, 20)
+    ).resolves.not.toThrow();
+
+    const result = await votingService.getVotersByNominee('nom-preserve', 1, 20);
+    expect(result.voters).toHaveLength(1);
+    // After fix: userEmail should be null (not throw). On unfixed code: field simply absent.
+    // Either way the function must not throw and the row must exist.
+    const voter = result.voters[0];
+    expect(voter).toBeDefined();
+    // userEmail is either absent (unfixed) or null (fixed) — both are acceptable here
+    if ('userEmail' in voter) {
+      expect(voter.userEmail).toBeNull();
+    }
+  });
+
+  it('3.2 — Property: all non-email fields are preserved across multiple vote records', async () => {
+    /**
+     * **Validates: Requirements 3.2, 3.3**
+     *
+     * Property: for any array of vote records, getVotersByNominee returns
+     * the same userId, quantity, type, and createdAt values as the input votes.
+     */
+    const voteRecords = [
+      { id: 'v1', nomineeId: 'nom-multi', categoryId: 'cat1', userId: 'u1', quantity: 5, type: 'FREE' as const, createdAt: '2024-01-10T08:00:00Z' },
+      { id: 'v2', nomineeId: 'nom-multi', categoryId: 'cat1', userId: 'u2', quantity: 2, type: 'PREMIUM' as const, createdAt: '2024-02-20T12:00:00Z' },
+      { id: 'v3', nomineeId: 'nom-multi', categoryId: 'cat1', userId: 'u3', quantity: 7, type: 'FREE' as const, createdAt: '2024-03-05T16:00:00Z' },
+    ];
+
+    (apiClient.get as MockType2).mockImplementation((url: string, options?: { params?: Record<string, unknown> }) => {
+      const params = options?.params ?? {};
+      if (url === '/admin/votes' && params.nomineeId === 'nom-multi') {
+        return Promise.resolve({
+          votes: voteRecords,
+          pagination: { page: 1, limit: 20, total: 3, totalPages: 1 },
+        });
+      }
+      if (url === '/admin/voters') {
+        return Promise.resolve({ voters: [] });
+      }
+      return Promise.resolve([]);
+    });
+
+    const result = await votingService.getVotersByNominee('nom-multi', 1, 20);
+
+    expect(result.voters).toHaveLength(3);
+    expect(result.total).toBe(3);
+    expect(result.totalPages).toBe(1);
+
+    // Verify each voter's non-email fields match the input vote records
+    // (sorted by createdAt descending as the service does)
+    const sortedInput = [...voteRecords].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    sortedInput.forEach((inputVote, i) => {
+      expect(result.voters[i].userId).toBe(inputVote.userId);
+      expect(result.voters[i].quantity).toBe(inputVote.quantity);
+      expect(result.voters[i].type).toBe(inputVote.type);
+      expect(result.voters[i].createdAt).toBe(inputVote.createdAt);
+    });
+  });
+});
