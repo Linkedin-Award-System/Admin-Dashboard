@@ -51,7 +51,7 @@ export function Layout({ children }: LayoutProps) {
         
         <footer className="py-6 px-4 bg-bg-secondary border-t border-border-light text-center">
           <p className="text-xs text-text-tertiary">
-            © {new Date().getFullYear()} LinkedIn Creative Awards. All rights reserved.
+            © 2026 LinkedIn Changemaker Award Ethiopia. All rights reserved.
           </p>
         </footer>
       </div>
