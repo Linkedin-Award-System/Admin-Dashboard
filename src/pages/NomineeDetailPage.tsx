@@ -259,11 +259,12 @@ export function NomineeDetailPage() {
                         Voter
                       </span>
                       <span style={{
-                        fontSize: 11, color: '#9ca3af', fontFamily: 'monospace',
+                        fontSize: 11, color: '#9ca3af',
+                        ...(voter.userEmail ? {} : { fontFamily: 'monospace' }),
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         display: 'block', maxWidth: 220,
                       }}>
-                        {voter.userId}
+                        {voter.userEmail ?? voter.userId}
                       </span>
                     </div>
                   </div>
