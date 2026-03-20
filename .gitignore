@@ -61,51 +61,15 @@ Thumbs.db
 # ─── Auto-generated / temporary markdown docs ────────────────────────────────
 # These are AI-generated notes and should not be tracked in version control.
 # Only README.md and docs/ folder markdown files are kept.
-TASK_*.md
-TEST_*.md
-DEBUG_*.md
-*_FIX*.md
-*_COMPLETE*.md
-*_SUMMARY*.md
-*_STATUS*.md
-*_ISSUE*.md
-*_VERIFICATION*.md
-*_CHANGES*.md
-*_APPLIED*.md
-*_CORRECTED*.md
-*_DIAGNOSTIC*.md
-*_REQUIRED*.md
-*_FIXED*.md
-*_GUIDE*.md
-*_IMPROVEMENT*.md
-*_ENHANCEMENT*.md
-*_ANALYSIS*.md
-*_REFERENCE*.md
-START_*.md
-WORK_*.md
-QUICK_*.md
-HOW_TO_*.md
-UI_*.md
-API_*.md
-BACKEND_*.md
-CONSOLE_*.md
-IMPLEMENTATION_*.md
-DASHBOARD_*.md
-ANALYTICS_*.md
-ACCESSIBILITY_*.md
-LOGIN_*.md
-SETUP.md
-SECONDARY_*.md
-VOTING_*.md
-RATE_*.md
-GIT_*.md
-test-api-integration.md
+*.md
+!README.md
+!docs/**/*.md
+!src/**/README.md
 
 # ─── Design system internal docs (not user-facing) ───────────────────────────
 src/shared/design-system/**/IMPLEMENTATION.md
 src/shared/design-system/**/README.md
 src/features/**/IMPLEMENTATION.md
-src/features/**/README.md
 
 # ─── Visual test / example files (dev-only) ──────────────────────────────────
 src/**/*.visual-test.tsx
