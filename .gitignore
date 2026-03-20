@@ -100,3 +100,13 @@ VOTING_*.md
 RATE_*.md
 GIT_*.md
 test-api-integration.md
+
+# ─── Design system internal docs (not user-facing) ───────────────────────────
+src/shared/design-system/**/IMPLEMENTATION.md
+src/shared/design-system/**/README.md
+src/features/**/IMPLEMENTATION.md
+src/features/**/README.md
+
+# ─── Visual test / example files (dev-only) ──────────────────────────────────
+src/**/*.visual-test.tsx
+src/**/*.examples.tsx
