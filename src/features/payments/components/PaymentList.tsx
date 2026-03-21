@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { usePayments, useUserEmailMap } from '../hooks/use-payments';
 import { StatusBadge } from '@/shared/design-system/patterns/StatusBadge';
 import { Button } from '@/shared/design-system';
@@ -87,24 +87,48 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 15;
 
+  // When sidebar filters change, clear the local quick filter override and reset page
+  useEffect(() => {
+    setQuickFilter('');
+    setCurrentPage(1);
+  }, [filters?.status, filters?.startDate, filters?.endDate]);
+
+  // Sync quickFilter with the sidebar status filter so they don't conflict
+  const activeStatusFilter = quickFilter || filters?.status || '';
+
   const processedPayments = useMemo(() => {
     if (!payments) return [];
     let list = [...payments].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    if (quickFilter) list = list.filter(p => p.status === quickFilter);
+
+    // Apply status filter (sidebar filter takes precedence, quickFilter overrides locally)
+    if (activeStatusFilter) list = list.filter(p => p.status === activeStatusFilter);
+
+    // Apply date range filter client-side (in case API doesn't filter server-side)
+    if (filters?.startDate && filters?.endDate) {
+      const start = new Date(filters.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(filters.endDate);
+      end.setHours(23, 59, 59, 999);
+      list = list.filter(p => {
+        const date = new Date(p.createdAt);
+        return date >= start && date <= end;
+      });
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         p =>
-          p.txRef.toLowerCase().includes(q) ||
-          p.userId.toLowerCase().includes(q) ||
-          (userEmailMap[p.userId] ?? '').toLowerCase().includes(q) ||
-          p.packageId.toLowerCase().includes(q)
+          (p.txRef ?? '').toLowerCase().includes(q) ||
+          (p.userId ?? '').toLowerCase().includes(q) ||
+          (userEmailMap[p.userId ?? ''] ?? '').toLowerCase().includes(q) ||
+          (p.packageId ?? '').toLowerCase().includes(q)
       );
     }
     return list;
-  }, [payments, quickFilter, searchQuery]);
+  }, [payments, activeStatusFilter, filters?.startDate, filters?.endDate, searchQuery, userEmailMap]);
 
   const totalPages = Math.max(1, Math.ceil(processedPayments.length / ITEMS_PER_PAGE));
   const paginatedPayments = processedPayments.slice(
@@ -125,7 +149,8 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
   }, [payments]);
 
   const handleQuickFilter = (val: string) => {
-    setQuickFilter(val);
+    // If user clicks the same quick filter that's already active via sidebar, clear it
+    setQuickFilter(prev => prev === val ? '' : val);
     setCurrentPage(1);
   };
 
@@ -188,15 +213,15 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
             onClick={() => handleQuickFilter(quickFilter === label.toUpperCase() ? '' : label.toUpperCase())}
             className={cn(
               'flex items-center gap-3 p-4 rounded-2xl border transition-all hover:shadow-sm',
-              quickFilter === label.toUpperCase()
+              activeStatusFilter === label.toUpperCase()
                 ? 'bg-[#0a66c2] border-[#0a66c2] shadow-md'
                 : cn(bg, border, 'hover:shadow-sm')
             )}
           >
-            <Icon className={cn('h-5 w-5 shrink-0', quickFilter === label.toUpperCase() ? 'text-white' : color)} />
+            <Icon className={cn('h-5 w-5 shrink-0', activeStatusFilter === label.toUpperCase() ? 'text-white' : color)} />
             <div className="text-left">
-              <div className={cn('text-xl font-bold', quickFilter === label.toUpperCase() ? 'text-white' : color)}>{count}</div>
-              <div className={cn('text-[10px] font-semibold uppercase tracking-wide', quickFilter === label.toUpperCase() ? 'text-blue-100' : 'text-gray-500')}>{label}</div>
+              <div className={cn('text-xl font-bold', activeStatusFilter === label.toUpperCase() ? 'text-white' : color)}>{count}</div>
+              <div className={cn('text-[10px] font-semibold uppercase tracking-wide', activeStatusFilter === label.toUpperCase() ? 'text-blue-100' : 'text-gray-500')}>{label}</div>
             </div>
           </button>
         ))}
@@ -211,11 +236,11 @@ export const PaymentList = ({ filters, searchQuery = '' }: PaymentListProps) => 
             onClick={() => handleQuickFilter(f.value)}
             className={cn(
               'px-4 py-1.5 rounded-full text-xs font-semibold transition-all border',
-              quickFilter === f.value
+              activeStatusFilter === f.value
                 ? 'text-white border-[#0a66c2] shadow-sm'
                 : 'bg-white text-gray-600 border-border-light hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'
             )}
-            style={quickFilter === f.value ? { backgroundColor: '#0a66c2' } : {}}
+            style={activeStatusFilter === f.value ? { backgroundColor: '#0a66c2' } : {}}
           >
             {f.label}
           </button>
