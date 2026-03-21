@@ -65,7 +65,7 @@ export const useUpdateCreditPackage = () => {
 
 export const useDeleteCreditPackage = () => {
   const queryClient = useQueryClient();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
 
   return useMutation({
     mutationFn: (id: string): Promise<void> =>
@@ -73,6 +73,9 @@ export const useDeleteCreditPackage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       success('Package deleted', 'Credit package has been removed.');
+    },
+    onError: (err) => {
+      toastError('Failed to delete package', err instanceof Error ? err.message : 'Could not delete the package. Please try again.');
     },
   });
 };
