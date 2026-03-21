@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/features/auth';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,12 @@ export function ProfileDropdown({ isOpen, onClose, onOpenProfile, onOpenSettings
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [imgError, setImgError] = useState(false);
+
+  // Reset error state when avatar URL changes
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.avatarUrl]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -62,8 +68,17 @@ export function ProfileDropdown({ isOpen, onClose, onOpenProfile, onOpenSettings
       {/* User Info */}
       <div className="p-4 border-b border-border-light">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-black text-lg">
-            {user?.name?.charAt(0) || 'L'}
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-black text-lg overflow-hidden">
+            {user?.avatarUrl && !imgError ? (
+              <img
+                src={user.avatarUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              user?.name?.charAt(0) || 'L'
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-black text-sm text-text-primary truncate">
