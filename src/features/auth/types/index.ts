@@ -8,6 +8,8 @@ export interface AuthUser {
   email: string;
   name: string;
   role: 'admin';
+  avatarUrl?: string;
+  jobTitle?: string;
 }
 
 export interface AuthState {
@@ -18,4 +20,6 @@ export interface AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  setAvatarUrl: (url: string) => void;
+  updateProfile: (data: { firstName: string; lastName: string; email: string; jobTitle: string }) => void;
 }
