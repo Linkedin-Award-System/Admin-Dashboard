@@ -173,9 +173,15 @@ class APIClientImpl implements APIClient {
     const status = error.response?.status;
     const apiError = error.response?.data;
 
-    // Use API error message if available
+    // Use API error message if available (prefer backend's own message)
     if (apiError?.error?.message) {
       return new Error(apiError.error.message);
+    }
+
+    // Some backends return { message: '...' } at the top level
+    const rawData = error.response?.data as Record<string, unknown> | undefined;
+    if (rawData?.message && typeof rawData.message === 'string') {
+      return new Error(rawData.message);
     }
 
     // Use predefined error message based on status code
