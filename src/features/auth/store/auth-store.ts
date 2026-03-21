@@ -4,6 +4,8 @@ import { authService } from '../services/auth-service';
 
 const TOKEN_KEY = 'auth_token';
 const SESSION_EXPIRY_KEY = 'auth_session_expiry';
+const AVATAR_URL_KEY = 'admin_avatar_url';
+const PROFILE_KEY = 'admin_profile';
 // Sessions expire after 8 hours
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
@@ -20,6 +22,7 @@ function setSessionExpiry(): void {
 function clearSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(SESSION_EXPIRY_KEY);
+  localStorage.removeItem(PROFILE_KEY);
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -65,12 +68,37 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       // Refresh session expiry on successful validation
       setSessionExpiry();
-      set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
+      // Restore persisted avatar URL
+      const savedAvatarUrl = localStorage.getItem(AVATAR_URL_KEY);
+      const savedProfile = localStorage.getItem(PROFILE_KEY);
+      const profileOverrides = savedProfile ? JSON.parse(savedProfile) : {};
+      set({
+        user: { ...user, ...(savedAvatarUrl ? { avatarUrl: savedAvatarUrl } : {}), ...profileOverrides },
+        isAuthenticated: true,
+        isLoading: false,
+        isInitialized: true,
+      });
     } catch (error) {
       console.error('Session restoration failed:', error);
       clearSession();
       set({ user: null, isAuthenticated: false, isLoading: false, isInitialized: true });
     }
+  },
+
+  setAvatarUrl: (url: string) => {
+    localStorage.setItem(AVATAR_URL_KEY, url);
+    set((state) => ({
+      user: state.user ? { ...state.user, avatarUrl: url } : state.user,
+    }));
+  },
+
+  updateProfile: (data: { firstName: string; lastName: string; email: string; jobTitle: string }) => {
+    const name = [data.firstName, data.lastName].filter(Boolean).join(' ') || data.firstName;
+    const overrides = { name, email: data.email, jobTitle: data.jobTitle };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(overrides));
+    set((state) => ({
+      user: state.user ? { ...state.user, ...overrides } : state.user,
+    }));
   },
 }));
 
