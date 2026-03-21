@@ -62,14 +62,19 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
   useEffect(() => {
     if (isOpen) {
       setActive(initialPanel ?? 'profile');
-      // Initialize profile fields from current user data
+    }
+  }, [isOpen, initialPanel]);
+
+  // Initialize profile fields from current user data whenever the modal opens or user changes
+  useEffect(() => {
+    if (isOpen) {
       const nameParts = (user?.name || '').split(' ');
       setFirstName(nameParts[0] || '');
       setLastName(nameParts.slice(1).join(' ') || '');
       setEmail(user?.email || '');
       setJobTitle(user?.jobTitle || '');
     }
-  }, [isOpen, initialPanel]);
+  }, [isOpen, user?.name, user?.email, user?.jobTitle]);
 
   // Load persisted notification preferences
   useEffect(() => {
@@ -118,13 +123,9 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
     setUploading(true);
     try {
       const result = await uploadService.uploadImage(file, 'GENERAL');
-      // Rewrite absolute Railway URL to a relative /uploads/... path so the
-      // Vite proxy serves it — avoids direct cross-origin requests to Railway.
-      const displayUrl = result.url.replace(
-        /^https?:\/\/[^/]+\/uploads\//,
-        '/uploads/'
-      );
-      setAvatarUrl(displayUrl);
+      // Store the absolute URL as-is — the browser can load it directly from Railway.
+      // Do NOT rewrite to /uploads/ because Vercel has no proxy for that path.
+      setAvatarUrl(result.url);
       // Revoke the blob URL now that we have the real URL
       URL.revokeObjectURL(objectUrl);
       setLocalPreview(null);
