@@ -58,19 +58,36 @@ Thumbs.db
 .temp
 .tmp
 
-# ─── Auto-generated / temporary markdown docs ────────────────────────────────
-# These are AI-generated notes and should not be tracked in version control.
+# ─── Markdown docs (auto-generated / temporary) ─────────────────────────────
 # Only README.md and docs/ folder markdown files are kept.
 *.md
 !README.md
+!SETUP.md
 !docs/**/*.md
 !src/**/README.md
 
-# ─── Design system internal docs (not user-facing) ───────────────────────────
+# ─── Design system internal docs ─────────────────────────────────────────────
 src/shared/design-system/**/IMPLEMENTATION.md
 src/shared/design-system/**/README.md
 src/features/**/IMPLEMENTATION.md
+src/features/**/README.md
 
 # ─── Visual test / example files (dev-only) ──────────────────────────────────
 src/**/*.visual-test.tsx
 src/**/*.examples.tsx
+
+# ─── Vercel / deployment ──────────────────────────────────────────────────────
+.vercel
+.vercel/**
+
+# ─── Type declaration caches ──────────────────────────────────────────────────
+*.d.ts.map
+
+# ─── Storybook ────────────────────────────────────────────────────────────────
+storybook-static
+
+# ─── Playwright / Cypress ─────────────────────────────────────────────────────
+test-results
+playwright-report
+cypress/videos
+cypress/screenshots
