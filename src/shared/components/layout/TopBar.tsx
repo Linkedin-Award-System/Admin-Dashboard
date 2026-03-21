@@ -1,6 +1,6 @@
 import { Menu, Bell, Settings } from 'lucide-react';
 import { useAuthStore } from '@/features/auth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { SettingsModal } from './SettingsModal';
 import type { PanelId } from './SettingsModal';
@@ -16,6 +16,12 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [settingsInitialPanel, setSettingsInitialPanel] = useState<PanelId>('profile');
+  const [avatarImgError, setAvatarImgError] = useState(false);
+
+  // Reset error state whenever the avatar URL changes
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [user?.avatarUrl]);
 
   const handleOpenProfile = () => {
     setSettingsInitialPanel('profile');
@@ -90,7 +96,16 @@ export function TopBar({ onMenuClick }: TopBarProps) {
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 p-[2px] shadow-lg shadow-primary-500/20 group-hover/user:scale-110 transition-transform duration-300">
                   <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center text-primary-600 font-black text-lg italic overflow-hidden">
-                    {user?.name?.charAt(0) || 'L'}
+                    {user?.avatarUrl && !avatarImgError ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt="Profile"
+                        className="w-full h-full object-cover rounded-[14px]"
+                        onError={() => setAvatarImgError(true)}
+                      />
+                    ) : (
+                      user?.name?.charAt(0) || 'L'
+                    )}
                   </div>
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
