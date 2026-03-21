@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Bell, Shield, Palette, Eye, EyeOff, Check, Camera, Coins, ChevronLeft } from 'lucide-react';
+import { X, User, Bell, Shield, Palette, Eye, EyeOff, Check, Camera, Coins, ChevronLeft, Loader2 } from 'lucide-react';
 import { useTheme } from '@/shared/hooks/use-theme';
 import type { ThemeMode } from '@/shared/hooks/use-theme';
+import { useAuthStore } from '@/features/auth';
+import { uploadService } from '@/features/uploads/services/upload-service';
 
 export type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'credits';
 
@@ -42,13 +44,97 @@ function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
 
 export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalProps) {
   const [active, setActive] = useState<PanelId>(initialPanel ?? 'profile');
+  const { user, setAvatarUrl, updateProfile } = useAuthStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
+  // Local blob preview shown immediately on file select, before upload completes
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+
+  // Profile form state — controlled inputs
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
 
   // Sync active panel whenever the modal opens with a new initialPanel
   useEffect(() => {
     if (isOpen) {
       setActive(initialPanel ?? 'profile');
+      // Initialize profile fields from current user data
+      const nameParts = (user?.name || '').split(' ');
+      setFirstName(nameParts[0] || '');
+      setLastName(nameParts.slice(1).join(' ') || '');
+      setEmail(user?.email || '');
+      setJobTitle(user?.jobTitle || '');
     }
   }, [isOpen, initialPanel]);
+
+  // Load persisted notification preferences
+  useEffect(() => {
+    if (isOpen) {
+      const saved = localStorage.getItem('admin_notif_prefs');
+      if (saved) {
+        try {
+          const prefs = JSON.parse(saved);
+          if (prefs.notifEmail !== undefined) setNotifEmail(prefs.notifEmail);
+          if (prefs.notifPush !== undefined) setNotifPush(prefs.notifPush);
+          if (prefs.notifSms !== undefined) setNotifSms(prefs.notifSms);
+          if (prefs.alertNewNominations !== undefined) setAlertNewNominations(prefs.alertNewNominations);
+          if (prefs.alertPaymentUpdates !== undefined) setAlertPaymentUpdates(prefs.alertPaymentUpdates);
+          if (prefs.alertVotingMilestones !== undefined) setAlertVotingMilestones(prefs.alertVotingMilestones);
+          if (prefs.alertSystemAlerts !== undefined) setAlertSystemAlerts(prefs.alertSystemAlerts);
+        } catch { /* ignore corrupt data */ }
+      }
+    }
+  }, [isOpen]);
+
+  // Reset image error state when avatar URL changes
+  useEffect(() => {
+    setImgError(false);
+    // Clear local preview once the store has the real URL
+    if (user?.avatarUrl) setLocalPreview(null);
+  }, [user?.avatarUrl]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so the same file can be re-selected after an error
+    e.target.value = '';
+    setUploadError(null);
+
+    const validation = uploadService.validateImage(file);
+    if (!validation.valid) {
+      setUploadError(validation.error ?? 'Invalid file');
+      return;
+    }
+
+    // Show instant local preview while upload is in progress
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPreview(objectUrl);
+    setImgError(false);
+
+    setUploading(true);
+    try {
+      const result = await uploadService.uploadImage(file, 'GENERAL');
+      // Rewrite absolute Railway URL to a relative /uploads/... path so the
+      // Vite proxy serves it — avoids direct cross-origin requests to Railway.
+      const displayUrl = result.url.replace(
+        /^https?:\/\/[^/]+\/uploads\//,
+        '/uploads/'
+      );
+      setAvatarUrl(displayUrl);
+      // Revoke the blob URL now that we have the real URL
+      URL.revokeObjectURL(objectUrl);
+      setLocalPreview(null);
+    } catch {
+      setUploadError('Upload failed. Please try again.');
+      // Keep showing the local preview so the user sees what they selected
+    } finally {
+      setUploading(false);
+    }
+  };
   // On mobile, track whether we're showing the nav list or the panel content
   const [mobileView, setMobileView] = useState<'nav' | 'panel'>('nav');
   const [showPw, setShowPw] = useState(false);
@@ -56,6 +142,10 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifPush, setNotifPush] = useState(true);
   const [notifSms, setNotifSms] = useState(false);
+  const [alertNewNominations, setAlertNewNominations] = useState(true);
+  const [alertPaymentUpdates, setAlertPaymentUpdates] = useState(true);
+  const [alertVotingMilestones, setAlertVotingMilestones] = useState(true);
+  const [alertSystemAlerts, setAlertSystemAlerts] = useState(true);
   const [saved, setSaved] = useState(false);
   const [freeVotePoints, setFreeVotePoints] = useState('10');
   const [premiumVotePoints, setPremiumVotePoints] = useState('50');
@@ -65,6 +155,14 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
   if (!isOpen) return null;
 
   const handleSave = () => {
+    if (active === 'profile') {
+      updateProfile({ firstName, lastName, email, jobTitle });
+    } else if (active === 'notifications') {
+      localStorage.setItem('admin_notif_prefs', JSON.stringify({
+        notifEmail, notifPush, notifSms,
+        alertNewNominations, alertPaymentUpdates, alertVotingMilestones, alertSystemAlerts,
+      }));
+    }
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 1500);
   };
@@ -91,41 +189,81 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-5 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white">
         <div className="relative shrink-0">
-          <div className="w-20 h-20 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center text-3xl font-black border-2 border-white/30 shadow-xl">C</div>
-          <button className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-            <Camera size={13} className="text-blue-700" />
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          {/* Avatar */}
+          <div className="w-20 h-20 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center text-3xl font-black border-2 border-white/30 shadow-xl overflow-hidden">
+            {(localPreview || (user?.avatarUrl && !imgError)) ? (
+              <img
+                src={localPreview ?? user!.avatarUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={() => { setImgError(true); setLocalPreview(null); }}
+              />
+            ) : (
+              user?.name?.charAt(0) || 'A'
+            )}
+          </div>
+          {/* Camera button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+            aria-label="Upload profile picture"
+          >
+            {uploading
+              ? <Loader2 size={13} className="text-blue-700 animate-spin" />
+              : <Camera size={13} className="text-blue-700" />
+            }
           </button>
         </div>
         <div className="min-w-0 text-center sm:text-left">
-          <p className="text-xl font-black tracking-tight">Commander</p>
-          <p className="text-blue-200 text-sm mt-0.5">admin@awards.com</p>
+          <p className="text-xl font-black tracking-tight">{user?.name || 'Commander'}</p>
+          <p className="text-blue-200 text-sm mt-0.5">{user?.email || 'admin@awards.com'}</p>
           <span className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-xs font-bold border border-white/20">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
             Active
           </span>
+          {uploading && (
+            <p className="mt-2 text-xs font-semibold text-blue-100 flex items-center gap-1.5">
+              <Loader2 size={11} className="animate-spin" /> Uploading photo...
+            </p>
+          )}
+          {uploadError && !uploading && (
+            <p className="mt-2 text-xs font-semibold text-red-200 bg-red-500/30 rounded-lg px-2 py-1">
+              {uploadError}
+            </p>
+          )}
+          {!uploading && !uploadError && localPreview === null && user?.avatarUrl && (
+            <p className="mt-2 text-xs font-semibold text-green-300 flex items-center gap-1">
+              <Check size={11} /> Photo saved
+            </p>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">First Name</label>
-          <input className={inp} defaultValue="Commander" />
+          <input className={inp} value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
         </div>
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Last Name</label>
-          <input className={inp} placeholder="Last name" />
+          <input className={inp} value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
         </div>
       </div>
       <div className="space-y-1.5">
         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Email Address</label>
-        <input className={inp} type="email" defaultValue="admin@awards.com" />
+        <input className={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" />
       </div>
       <div className="space-y-1.5">
         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Job Title</label>
-        <input className={inp} placeholder="e.g. Awards Administrator" />
-      </div>
-      <div className="space-y-1.5">
-        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Bio</label>
-        <textarea className={`${inp} min-h-[80px] resize-none`} placeholder="A short bio about yourself..." />
+        <input className={inp} value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Awards Administrator" />
       </div>
     </div>
   );
@@ -151,10 +289,20 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
       ))}
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-6 mb-3">Alert Types</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {['New nominations', 'Payment updates', 'Voting milestones', 'System alerts'].map(item => (
-          <label key={item} className="flex items-center gap-3 p-3.5 rounded-xl border-2 border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all group">
-            <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 shrink-0" />
-            <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">{item}</span>
+        {([
+          { label: 'New nominations',   value: alertNewNominations,   set: () => setAlertNewNominations(v => !v) },
+          { label: 'Payment updates',   value: alertPaymentUpdates,   set: () => setAlertPaymentUpdates(v => !v) },
+          { label: 'Voting milestones', value: alertVotingMilestones, set: () => setAlertVotingMilestones(v => !v) },
+          { label: 'System alerts',     value: alertSystemAlerts,     set: () => setAlertSystemAlerts(v => !v) },
+        ] as const).map(item => (
+          <label key={item.label} className="flex items-center gap-3 p-3.5 rounded-xl border-2 border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all group">
+            <input
+              type="checkbox"
+              checked={item.value}
+              onChange={item.set}
+              className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 shrink-0"
+            />
+            <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">{item.label}</span>
           </label>
         ))}
       </div>
