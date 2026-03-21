@@ -350,8 +350,12 @@ export const CreditsPage = () => {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // Error shown via toast from onError — keep dialog open so user sees it
+    }
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -464,7 +468,7 @@ export const CreditsPage = () => {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) { setDeleteTarget(null); deleteMutation.reset(); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Package</AlertDialogTitle>
@@ -475,12 +479,12 @@ export const CreditsPage = () => {
           {deleteMutation.error && (
             <div style={{ padding: '0.75rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem' }}>
               <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Failed to delete package.'}
+                {deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Failed to delete package. Please try again.'}
               </p>
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => { setDeleteTarget(null); deleteMutation.reset(); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               loading={deleteMutation.isPending}
