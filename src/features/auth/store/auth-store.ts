@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AuthState, LoginCredentials } from '../types';
 import { authService } from '../services/auth-service';
+import { resolveImageUrl } from '@/lib/resolve-image-url';
 
 const TOKEN_KEY = 'auth_token';
 const SESSION_EXPIRY_KEY = 'auth_session_expiry';
@@ -68,8 +69,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       // Refresh session expiry on successful validation
       setSessionExpiry();
-      // Restore persisted avatar URL
-      const savedAvatarUrl = localStorage.getItem(AVATAR_URL_KEY);
+      // Restore persisted avatar URL — rewrite raw Railway URLs through the proxy
+      const rawAvatarUrl = localStorage.getItem(AVATAR_URL_KEY);
+      const savedAvatarUrl = resolveImageUrl(rawAvatarUrl);
+      // Keep localStorage in sync with the proxied URL so future restores are already correct
+      if (rawAvatarUrl && savedAvatarUrl && savedAvatarUrl !== rawAvatarUrl) {
+        localStorage.setItem(AVATAR_URL_KEY, savedAvatarUrl);
+      }
       const savedProfile = localStorage.getItem(PROFILE_KEY);
       const profileOverrides = savedProfile ? JSON.parse(savedProfile) : {};
       set({

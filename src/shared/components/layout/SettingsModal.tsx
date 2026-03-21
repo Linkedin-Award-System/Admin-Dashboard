@@ -5,6 +5,7 @@ import { useTheme } from '@/shared/hooks/use-theme';
 import type { ThemeMode } from '@/shared/hooks/use-theme';
 import { useAuthStore } from '@/features/auth';
 import { uploadService } from '@/features/uploads/services/upload-service';
+import { resolveImageUrl } from '@/lib/resolve-image-url';
 
 export type PanelId = 'profile' | 'notifications' | 'security' | 'appearance' | 'credits';
 
@@ -123,9 +124,10 @@ export function SettingsModal({ isOpen, onClose, initialPanel }: SettingsModalPr
     setUploading(true);
     try {
       const result = await uploadService.uploadImage(file, 'GENERAL');
-      // Store the absolute URL as-is — the browser can load it directly from Railway.
-      // Do NOT rewrite to /uploads/ because Vercel has no proxy for that path.
-      setAvatarUrl(result.url);
+      // Rewrite the Railway URL through the Vercel /api/fetch-image proxy so the
+      // browser can load it cross-origin without CORS errors.
+      const proxiedUrl = resolveImageUrl(result.url) ?? result.url;
+      setAvatarUrl(proxiedUrl);
       // Revoke the blob URL now that we have the real URL
       URL.revokeObjectURL(objectUrl);
       setLocalPreview(null);
