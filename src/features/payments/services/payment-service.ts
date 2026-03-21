@@ -61,6 +61,11 @@ export function unwrapPayments(raw: unknown): PaymentTransaction[] {
   }
   return payments.map((p) => ({
     ...p,
+    txRef: p.txRef ?? '',
+    userId: p.userId ?? '',
+    packageId: p.packageId ?? '',
+    currency: p.currency ?? 'ETB',
+    amount: p.amount ?? 0,
     status: normalizeStatus((p.status as string) ?? ''),
   }));
 }
