@@ -11,6 +11,31 @@ import { formatNumber } from '../utils/format-utils';
 
 const COLORS = ['#0a66c2', '#10b981', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
 
+const MAX_LABEL_LEN = 16;
+
+function truncate(str: string, max = MAX_LABEL_LEN) {
+  return str.length > max ? str.slice(0, max - 1) + '…' : str;
+}
+
+const CustomXTick = ({ x, y, payload }: any) => {
+  const label = truncate(payload.value);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <title>{payload.value}</title>
+      <text
+        x={0} y={0} dy={4}
+        textAnchor="end"
+        transform="rotate(-45)"
+        fill="#9ca3af"
+        fontSize={10}
+        fontFamily="inherit"
+      >
+        {label}
+      </text>
+    </g>
+  );
+};
+
 const Tip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -20,8 +45,9 @@ const Tip = ({ active, payload, label }: any) => {
       fontSize: 12, fontWeight: 600,
       boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
       border: '1px solid rgba(255,255,255,0.08)',
+      maxWidth: 200,
     }}>
-      <div style={{ color: '#94a3b8', marginBottom: 4, fontSize: 11 }}>{label}</div>
+      <div style={{ color: '#94a3b8', marginBottom: 4, fontSize: 11, wordBreak: 'break-word' }}>{label}</div>
       <div style={{ color: '#60a5fa', fontSize: 15 }}>{formatNumber(payload[0].value)} votes</div>
     </div>
   );
@@ -32,21 +58,23 @@ export const VotesByCategoryChart = memo(function VotesByCategoryChart({
 }: VotesByCategoryChartProps) {
   if (isLoading) return <ChartSkeleton height={280} />;
   if (error || !data?.length) return (
-    <ChartContainer title="Votes by Category" icon={BarChart3} chartHeight="240px">
+    <ChartContainer title="Votes by Category" icon={BarChart3} chartHeight="260px">
       <ChartEmpty message="No category vote data" icon={BarChart3} />
     </ChartContainer>
   );
 
   return (
-    <ChartContainer title="Votes by Category" icon={BarChart3} chartHeight="240px">
+    <ChartContainer title="Votes by Category" icon={BarChart3} chartHeight="260px">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, left: -10, bottom: 40 }} barSize={28}>
+        <BarChart data={data} margin={{ top: 8, right: 8, left: -10, bottom: 60 }} barSize={24}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
           <XAxis
             dataKey="category"
-            tick={{ fill: '#9ca3af', fontSize: 10 }}
-            axisLine={false} tickLine={false}
-            interval={0} angle={-30} textAnchor="end" dy={8}
+            tick={<CustomXTick />}
+            axisLine={false}
+            tickLine={false}
+            interval={0}
+            height={60}
           />
           <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatNumber} dx={-4} />
           <Tooltip content={<Tip />} cursor={{ fill: 'rgba(10,102,194,0.05)' }} />
