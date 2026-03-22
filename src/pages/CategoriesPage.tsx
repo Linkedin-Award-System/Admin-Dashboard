@@ -4,15 +4,29 @@ import { Layout } from '@/shared/components/layout';
 import { CategoryList } from '@/features/categories/components/CategoryList';
 import { CategoryForm } from '@/features/categories/components/CategoryForm';
 import { DeleteCategoryDialog } from '@/features/categories/components/DeleteCategoryDialog';
+import { ViewToggle, type ViewMode } from '@/features/categories/components/ViewToggle';
+import { CategoryTableView } from '@/features/categories/components/CategoryTableView';
 import type { Category } from '@/features/categories/types';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/shared/design-system';
+
+function loadViewMode(): ViewMode {
+  const stored = localStorage.getItem('categories-view-mode');
+  if (stored === 'grid' || stored === 'list') return stored;
+  return 'grid';
+}
 
 export const CategoriesPage = () => {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode());
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('categories-view-mode', mode);
+  };
 
   const handleCreate = () => {
     setEditingCategory(undefined);
@@ -80,12 +94,26 @@ export const CategoriesPage = () => {
             </div>
           </div>
         ) : (
-          <CategoryList
-            onCreate={handleCreate}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onSelect={handleSelect}
-          />
+          <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+              <ViewToggle value={viewMode} onChange={handleViewModeChange} />
+            </div>
+            {viewMode === 'grid' ? (
+              <CategoryList
+                onCreate={handleCreate}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSelect={handleSelect}
+              />
+            ) : (
+              <CategoryTableView
+                onCreate={handleCreate}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSelect={handleSelect}
+              />
+            )}
+          </>
         )}
 
         <DeleteCategoryDialog
