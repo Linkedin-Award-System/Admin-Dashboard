@@ -59,18 +59,20 @@ Thumbs.db
 .tmp
 
 # ─── Markdown docs (auto-generated / temporary) ─────────────────────────────
-# Only README.md and docs/ folder markdown files are kept.
-*.md
+# Root-level markdown files (task notes, fix summaries, debug logs, etc.)
+/*.md
 !README.md
 !SETUP.md
+
+# docs/ folder markdown files are kept
 !docs/**/*.md
+
+# Feature README files inside src are kept
 !src/**/README.md
 
 # ─── Design system internal docs ─────────────────────────────────────────────
 src/shared/design-system/**/IMPLEMENTATION.md
-src/shared/design-system/**/README.md
 src/features/**/IMPLEMENTATION.md
-src/features/**/README.md
 
 # ─── Visual test / example files (dev-only) ──────────────────────────────────
 src/**/*.visual-test.tsx
