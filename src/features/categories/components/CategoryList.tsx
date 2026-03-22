@@ -1,13 +1,32 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCategories } from '../hooks/use-categories';
 import { useNominees } from '@/features/nominees/hooks/use-nominees';
 import { Input } from '@/shared/components/ui/input';
 import { Button, PageHeader } from '@/shared/design-system';
-import { Pencil, Trash2, Plus, FolderOpen, Search, Users, Tag, TrendingUp } from 'lucide-react';
+import { Pencil, Trash2, Plus, FolderOpen, Search, Users, Tag, TrendingUp, GripVertical } from 'lucide-react';
 import { ExportButton } from '@/features/exports/components/ExportButton';
 import { exportService } from '@/features/exports/services/export-service';
 import { CategoryListSkeleton } from './CategoryListSkeleton';
+import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useCategoryOrderStore } from '../store/category-order-store';
 import type { Category } from '../types';
+
+export function mergeOrder(savedIds: string[], liveCategories: Category[]): Category[] {
+  const liveMap = new Map(liveCategories.map(c => [c.id, c]));
+  // Step 1: saved IDs that still exist in live data (preserves saved order, removes stale)
+  const ordered: Category[] = savedIds
+    .filter(id => liveMap.has(id))
+    .map(id => liveMap.get(id)!);
+  // Step 2: new categories not in saved order, sorted alphabetically
+  const savedSet = new Set(savedIds);
+  const newCategories = liveCategories
+    .filter(c => !savedSet.has(c.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...ordered, ...newCategories];
+}
 
 interface CategoryListProps {
   onEdit?: (category: Category) => void;
@@ -21,7 +40,15 @@ export const CategoryList = ({ onEdit, onDelete, onCreate, onSelect }: CategoryL
   const { data: nominees } = useNominees();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 18;
+
+  const { order, setOrder, loadFromStorage } = useCategoryOrderStore();
+
+  // Load persisted order on mount
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
 
   // Derive nominee counts per category from the nominees list (more accurate than API nomineeCount)
   const nomineeCounts = useMemo(() => {
@@ -34,17 +61,16 @@ export const CategoryList = ({ onEdit, onDelete, onCreate, onSelect }: CategoryL
     return map;
   }, [nominees]);
 
+  // Merge saved order with live data, then filter by search (preserving saved order)
+  const orderedCategories = useMemo(() => mergeOrder(order, categories ?? []), [order, categories]);
+
   const filteredCategories = useMemo(() => {
-    if (!categories) return [];
-    let filtered = categories;
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
-      );
-    }
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [categories, searchTerm]);
+    if (!searchTerm) return orderedCategories;
+    const q = searchTerm.toLowerCase();
+    return orderedCategories.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
+    );
+  }, [orderedCategories, searchTerm]);
 
   const totalNominees = useMemo(
     () => nominees?.length ?? (categories ?? []).reduce((sum, c) => sum + (c.nomineeCount ?? 0), 0),
@@ -61,6 +87,27 @@ export const CategoryList = ({ onEdit, onDelete, onCreate, onSelect }: CategoryL
     setSearchTerm(value);
     setCurrentPage(1);
   };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      setActiveId(null);
+      return;
+    }
+    const ids = orderedCategories.map(c => c.id);
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    if (oldIndex !== -1 && newIndex !== -1) {
+      setOrder(arrayMove(ids, oldIndex, newIndex));
+    }
+    setActiveId(null);
+  };
+
+  const activeCategory = activeId ? orderedCategories.find(c => c.id === activeId) : null;
 
   if (isLoading) return <CategoryListSkeleton />;
 
@@ -158,20 +205,36 @@ export const CategoryList = ({ onEdit, onDelete, onCreate, onSelect }: CategoryL
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-          {paginatedCategories.map((category) => {
-            return (
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={!!searchTerm ? undefined : handleDragEnd}
+        >
+          <SortableContext items={orderedCategories.map(c => c.id)} strategy={rectSortingStrategy}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              {paginatedCategories.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  category={category}
+                  nomineeCount={nomineeCounts.get(category.id) ?? category.nomineeCount ?? 0}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onSelect={onSelect}
+                  dragDisabled={!!searchTerm}
+                />
+              ))}
+            </div>
+          </SortableContext>
+          <DragOverlay>
+            {activeCategory && (
               <CategoryCard
-                key={category.id}
-                category={category}
-                nomineeCount={nomineeCounts.get(category.id) ?? category.nomineeCount ?? 0}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onSelect={onSelect}
+                category={activeCategory}
+                nomineeCount={nomineeCounts.get(activeCategory.id) ?? activeCategory.nomineeCount ?? 0}
+                isDragOverlay
               />
-            );
-          })}
-        </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* Pagination */}
@@ -202,33 +265,85 @@ interface CardProps {
   onEdit?: (c: Category) => void;
   onDelete?: (c: Category) => void;
   onSelect?: (c: Category) => void;
+  isDragOverlay?: boolean;   // true when rendered inside DragOverlay (no useSortable)
+  dragDisabled?: boolean;    // true when search is active
 }
 
-const CategoryCard = ({ category, nomineeCount, onEdit, onDelete, onSelect }: CardProps) => {
+const CategoryCard = ({ category, nomineeCount, onEdit, onDelete, onSelect, isDragOverlay, dragDisabled }: CardProps) => {
   const [hovered, setHovered] = useState(false);
+  const [handleHovered, setHandleHovered] = useState(false);
+
+  // Task 4.3: Wire useSortable — always call the hook (React rules), but use 'overlay' id when isDragOverlay
+  const sortable = useSortable({ id: isDragOverlay ? 'overlay' : category.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = sortable;
+  const isDragging = isDragOverlay ? false : isSortableDragging;
+
+  // Task 4.4: Compute card transform/style
+  const cardTransform = CSS.Transform.toString(transform);
+
+  const cardStyle: React.CSSProperties = {
+    background: '#fff',
+    border: `1px solid ${hovered && !isDragging ? '#085299' : '#e5e7eb'}`,
+    borderRadius: '1.25rem',
+    padding: '1.5rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    position: 'relative',
+    overflow: 'hidden',
+    // Task 4.4: dynamic visual states
+    opacity: isDragging ? 0.4 : 1,
+    transform: isDragOverlay
+      ? 'scale(1.04)'
+      : isDragging
+        ? `${cardTransform ?? ''} scale(0.98)`.trim()
+        : cardTransform ?? undefined,
+    transition: transition ?? 'all 0.2s ease',
+    boxShadow: isDragOverlay
+      ? '0 20px 40px rgba(0,0,0,0.18)'
+      : hovered
+        ? '0 8px 24px rgba(8,82,153,0.12)'
+        : '0 1px 3px rgba(0,0,0,0.06)',
+    cursor: isDragOverlay ? 'grabbing' : onSelect ? 'pointer' : 'default',
+  };
 
   return (
     <div
+      ref={setNodeRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => onSelect?.(category)}
-      style={{
-        background: '#fff',
-        border: `1px solid ${hovered ? '#085299' : '#e5e7eb'}`,
-        borderRadius: '1.25rem',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-        boxShadow: hovered ? '0 8px 24px rgba(8,82,153,0.12)' : '0 1px 3px rgba(0,0,0,0.06)',
-        transition: 'all 0.2s ease',
-        cursor: onSelect ? 'pointer' : 'default',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+      style={cardStyle}
     >
-      {/* Top row: nominee badge */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+      {/* Top row: drag handle + nominee badge */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        {/* Task 4.2: Drag handle button */}
+        <button
+          {...listeners}
+          {...attributes}
+          title="Drag to reorder"
+          aria-label="Drag to reorder"
+          onMouseEnter={() => { if (!dragDisabled) setHandleHovered(true); }}
+          onMouseLeave={() => setHandleHovered(false)}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '0.25rem',
+            cursor: dragDisabled ? 'not-allowed' : 'grab',
+            color: dragDisabled ? '#d1d5db' : handleHovered ? '#085299' : '#9ca3af',
+            opacity: dragDisabled ? 0.4 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            borderRadius: '0.25rem',
+            transition: 'color 0.15s ease',
+            flexShrink: 0,
+          }}
+        >
+          <GripVertical size={16} />
+        </button>
+
+        {/* Nominee badge */}
         <div
           style={{
             background: '#eff6ff',
