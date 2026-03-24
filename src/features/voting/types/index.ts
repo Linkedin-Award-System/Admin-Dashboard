@@ -15,6 +15,7 @@ export interface NomineeVoteData {
   nomineeName: string;
   voteCount: number;
   percentage: number;
+  profileImageUrl?: string;
 }
 
 export interface VoteTimelineData {
