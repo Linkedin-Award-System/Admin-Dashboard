@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useVoteStats } from '../hooks/use-voting';
 import type { DateRange } from '../types';
+import { NomineeAvatar } from './NomineeAvatar';
+import { CategoryExportButton } from './CategoryExportButton';
 import {
   BarChart2,
   Trophy,
@@ -51,6 +53,7 @@ function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
           >
             View nominees <ExternalLink size={11} />
           </button>
+          <CategoryExportButton categoryName={stat.categoryName} nominees={stat.nominees} />
           <button
             onClick={() => setExpanded(v => !v)}
             className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
@@ -125,6 +128,7 @@ function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
                         >
                           {globalIdx + 1}
                         </span>
+                        <NomineeAvatar name={nominee.nomineeName} profileImageUrl={nominee.profileImageUrl} />
                         <p className={cn(
                           'text-sm font-medium truncate max-w-[180px] group-hover:text-blue-700 transition-colors',
                           isLeader ? 'text-gray-900' : 'text-gray-600'
