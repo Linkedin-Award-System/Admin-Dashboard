@@ -10,6 +10,7 @@ import type { Category } from '@/features/categories/types';
 import type { VoteStats } from '@/features/voting/types';
 import type { PaymentTransaction } from '@/features/payments/types';
 import type { Nominee } from '@/features/nominees/types';
+import type { NomineeVoteData } from '@/features/voting/types';
 
 export const exportService = {
   /**
@@ -101,6 +102,35 @@ export const exportService = {
 
     return format === 'pdf'
       ? generatePDF(rows, headers, 'Nominees')
+      : generateCSV(rows, headers);
+  },
+
+  /**
+   * Export category leaderboard as CSV or PDF
+   */
+  async exportCategoryLeaderboard(
+    format: ExportFormat,
+    categoryName: string,
+    nominees: NomineeVoteData[]
+  ): Promise<Blob> {
+    const rows = nominees.map((nominee, index) => ({
+      rank: index + 1,
+      nomineeName: nominee.nomineeName,
+      voteCount: nominee.voteCount,
+      percentage: `${nominee.percentage.toFixed(1)}%`,
+      categoryName,
+    }));
+
+    const headers = [
+      { key: 'rank' as const, label: 'Rank' },
+      { key: 'nomineeName' as const, label: 'Nominee Name' },
+      { key: 'voteCount' as const, label: 'Vote Count' },
+      { key: 'percentage' as const, label: 'Percentage' },
+      { key: 'categoryName' as const, label: 'Category Name' },
+    ];
+
+    return format === 'pdf'
+      ? generatePDF(rows, headers, `${categoryName} Leaderboard`)
       : generateCSV(rows, headers);
   },
 };
