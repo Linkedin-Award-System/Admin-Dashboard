@@ -70,6 +70,32 @@ Thumbs.db
 # Feature README files inside src are kept
 !src/**/README.md
 
+# ─── Agent-generated work files ──────────────────────────────────────────────
+GIT_COMMIT_SUMMARY.md
+TEST_*.md
+DEBUG_*.md
+LOGIN_FIX_*.md
+UI_FIXES_*.md
+UI_BUTTON_FIXES_*.md
+UI_FIX_*.md
+BUTTON_COLOR_*.md
+DASHBOARD_*.md
+API_*.md
+ANALYTICS_*.md
+VOTING_*.md
+IMPLEMENTATION_*.md
+WORK_COMPLETE_*.md
+QUICK_*.md
+RATE_LIMIT_*.md
+SECONDARY_BUTTON_*.md
+HOW_TO_SEE_*.md
+TASK_*.md
+ACCESSIBILITY_*.md
+CONSOLE_ERRORS_*.md
+BACKEND_FIXES_*.md
+TESTING_GUIDE.md
+test-api-integration.md
+
 # ─── Design system internal docs ─────────────────────────────────────────────
 src/shared/design-system/**/IMPLEMENTATION.md
 src/features/**/IMPLEMENTATION.md
