@@ -33,6 +33,7 @@ interface Nominee {
   fullName: string;
   name?: string;
   voteCount: number;
+  profileImageUrl?: string;
   categories?: Array<{ id: string; name: string } | string>;
 }
 
@@ -110,6 +111,7 @@ export const votingService = {
           nomineeName,
           voteCount,
           percentage: stats.totalVotes > 0 ? (voteCount / stats.totalVotes) * 100 : 0,
+          profileImageUrl: nominee.profileImageUrl,
         };
       }).sort((a, b) => b.voteCount - a.voteCount);
       
