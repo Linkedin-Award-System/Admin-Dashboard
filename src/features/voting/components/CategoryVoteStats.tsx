@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useVoteStats } from '../hooks/use-voting';
 import type { DateRange } from '../types';
+import { applyFilters, type SortOrder, type CategoryFilter } from '../utils/category-filter-utils';
 import { NomineeAvatar } from './NomineeAvatar';
 import { CategoryExportButton } from './CategoryExportButton';
 import {
@@ -12,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/features/dashboard/utils/format-utils';
@@ -20,6 +22,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface CategoryVoteStatsProps {
   dateRange?: DateRange;
+  search: string;
+  sort: SortOrder;
+  categoryFilter: CategoryFilter;
+  onReset: () => void;
 }
 
 const NOMINEES_PER_PAGE = 10;
@@ -191,8 +197,13 @@ function CategoryCard({ stat }: { stat: import('../types').VoteStats }) {
   );
 }
 
-export const CategoryVoteStats = ({ dateRange }: CategoryVoteStatsProps) => {
+export const CategoryVoteStats = ({ dateRange, search, sort, categoryFilter, onReset }: CategoryVoteStatsProps) => {
   const { data: voteStats, isLoading, error } = useVoteStats(dateRange);
+
+  const displayed = useMemo(
+    () => applyFilters(voteStats ?? [], search, sort, categoryFilter),
+    [voteStats, search, sort, categoryFilter]
+  );
 
   if (isLoading) {
     return (
@@ -224,12 +235,25 @@ export const CategoryVoteStats = ({ dateRange }: CategoryVoteStatsProps) => {
     );
   }
 
-  // Sort by total votes descending
-  const sorted = [...voteStats].sort((a, b) => b.totalVotes - a.totalVotes);
+  if (voteStats && voteStats.length > 0 && displayed.length === 0) {
+    return (
+      <div className="py-16 text-center bg-white rounded-[1.5rem] border border-dashed border-gray-200">
+        <Filter className="text-gray-200 mx-auto mb-3" size={36} />
+        <h3 className="text-base font-semibold text-gray-500">No categories match your filters</h3>
+        <p className="text-gray-400 text-sm mt-1">Try adjusting your search or filter criteria.</p>
+        <button
+          onClick={onReset}
+          className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          Clear filters
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {sorted.map((stat) => (
+      {displayed.map((stat) => (
         <CategoryCard key={stat.categoryId} stat={stat} />
       ))}
     </div>
