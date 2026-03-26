@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/shared/components/layout';
 import { VotingDashboard, CategoryVoteStats, VoteTimeline, DateRangeFilter } from '@/features/voting';
 import type { DateRange } from '@/features/voting';
@@ -6,6 +6,8 @@ import { BarChart3, Users2, Layers, RefreshCw } from 'lucide-react';
 import { useVoteStats, useUniqueVoterCount } from '@/features/voting/hooks/use-voting';
 import { formatNumber } from '@/features/dashboard/utils/format-utils';
 import { useQueryClient } from '@tanstack/react-query';
+import { applyFilters, type SortOrder, type CategoryFilter } from '@/features/voting/utils/category-filter-utils';
+import { CategoryFilterBar } from '@/features/voting/components/CategoryFilterBar';
 
 // Summary bar shown at the top of the page
 function VotingSummaryBar({ dateRange }: { dateRange?: DateRange }) {
@@ -69,6 +71,21 @@ function VotingSummaryBar({ dateRange }: { dateRange?: DateRange }) {
 
 export const VotingPage = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortOrder>('most-votes');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
+
+  const { data: voteStats } = useVoteStats(dateRange);
+  const totalCount = voteStats?.length ?? 0;
+  const filteredCount = applyFilters(voteStats ?? [], search, sort, categoryFilter).length;
+  const isFiltered = search !== '' || sort !== 'most-votes' || categoryFilter !== 'all';
+  const handleReset = () => { setSearch(''); setSort('most-votes'); setCategoryFilter('all'); };
+
+  // Build category options from live vote stats
+  const categoryOptions = useMemo(
+    () => (voteStats ?? []).map(s => ({ id: s.categoryId, name: s.categoryName })),
+    [voteStats]
+  );
 
   return (
     <Layout>
@@ -94,11 +111,32 @@ export const VotingPage = () => {
 
         {/* Per-Category Breakdown */}
         <div>
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Category Breakdown</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Detailed vote distribution per category</p>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Category Breakdown</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Detailed vote distribution per category</p>
+            </div>
+            <CategoryFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              sort={sort}
+              onSortChange={setSort}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              categories={categoryOptions}
+              totalCount={totalCount}
+              filteredCount={filteredCount}
+              isFiltered={isFiltered}
+              onReset={handleReset}
+            />
           </div>
-          <CategoryVoteStats dateRange={dateRange} />
+          <CategoryVoteStats
+            dateRange={dateRange}
+            search={search}
+            sort={sort}
+            categoryFilter={categoryFilter}
+            onReset={handleReset}
+          />
         </div>
 
       </div>
